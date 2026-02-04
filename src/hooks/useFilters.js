@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+
 export function useFilters(initialFilters = {}) {
   const [filters, setFilters] = useState({
     city: '',
@@ -10,7 +11,10 @@ export function useFilters(initialFilters = {}) {
   })
 
   const updateFilter = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+    setFilters(prev => (
+      { ...prev, [key]: value }
+
+    ))
   }
 
   const resetFilters = () => {

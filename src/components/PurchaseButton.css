@@ -1,0 +1,35 @@
+.purchase-button-container {
+  margin-top: 15px;
+}
+
+.purchase-button {
+  width: 100%;
+  padding: 12px 24px;
+  background-color: #2ecc71 !important;
+  color: white !important;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.purchase-button:hover:not(:disabled) {
+  background-color: #27ae60 !important;
+}
+
+.purchase-button:disabled {
+  background-color: #95a5a6 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.purchase-error {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #ffe6e6;
+  color: #e74c3c;
+  border-radius: 4px;
+  font-size: 14px;
+}

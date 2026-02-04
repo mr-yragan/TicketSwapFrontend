@@ -1,4 +1,4 @@
-  // TODO: добавить иконку поиска и кнопку очистки
+  // todo добавить иконку поиска и кнопку очистки
   export function SearchBar({ value, onChange, placeholder = "Поиск билетов..." }) {
     const handleChange = (e) => {
       onChange(e.target.value)

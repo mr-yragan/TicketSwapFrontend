@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useModal } from '@/context/ModalContext'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/context/useAuth'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 
@@ -71,10 +71,13 @@ export function LoginModal() {
               name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Введите пароль"
+              placeholder="Введите пароль (минимум 8 символов)"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               required
+              minLength={8}
+              maxLength={72}
             />
+            <p className="mt-1 text-xs text-gray-500">Пароль должен содержать от 8 до 72 символов</p>
           </div>
 
           <div className="flex items-center">
@@ -111,8 +114,7 @@ export function LoginModal() {
               closeModal()
               openModal('register')
             }}
-            className="text-blue-500 hover:text-blue-700 font-medium cursor-pointer"
-          >
+            className="text-blue-500 hover:text-blue-700 font-medium cursor-pointer">
             Зарегистрироваться
           </button>
         </div>

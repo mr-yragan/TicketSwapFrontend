@@ -5,8 +5,11 @@ import { AuthProvider } from './context/AuthContext'
 import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { RegisterModal } from './components/RegisterModal'
+import { SellTicketModal } from './components/SellTicketModal'
 import HomePage from './pages/HomePage'
 import TicketDetailPage from './pages/TicketDetailPage'
+import ProfilePage from './pages/ProfilePage'
+import { TicketsRefreshProvider } from '@/context/TicketsRefreshContext';
 
 function AppContent() {
   const { currentModal } = useModal()
@@ -17,10 +20,12 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/ticket/:id" element={<TicketDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
       </Routes>
 
       {currentModal === 'login' && <LoginModal />}
       {currentModal === 'register' && <RegisterModal />}
+        {currentModal === 'sell' && <SellTicketModal />}
     </div>
   )
 }
@@ -28,11 +33,13 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ModalProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </ModalProvider>
+      <TicketsRefreshProvider>
+        <ModalProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </ModalProvider>
+      </TicketsRefreshProvider>
     </AuthProvider>
   )
 }

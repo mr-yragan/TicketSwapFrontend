@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { mockTickets } from '@/data/mockTickets'
+import { ticketsApi } from '@/api/apiClient'
 
 export function useTicket(id) {
   const [ticket, setTicket] = useState(null)
@@ -11,8 +11,8 @@ export function useTicket(id) {
       try {
         setLoading(true)
         setError(null)
-        
-        const data = mockTickets.find(t => t.id === parseInt(id))
+
+        const data = await ticketsApi.getById(id)
         if (!data) {
           setError('Билет не найден')
           setTicket(null)
