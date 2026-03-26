@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ticketsApi } from '@/api/apiClient'
+import { ticketsApi } from '@/api'
 
 export function useTicket(id) {
   const [ticket, setTicket] = useState(null)
@@ -11,17 +11,11 @@ export function useTicket(id) {
       try {
         setLoading(true)
         setError(null)
-
         const data = await ticketsApi.getById(id)
-        if (!data) {
-          setError('Билет не найден')
-          setTicket(null)
-          return
-        }
-
         setTicket(data)
       } catch (err) {
-        setError(err.message)
+        setError(err.message || 'Ошибка загрузки билета')
+        setTicket(null)
       } finally {
         setLoading(false)
       }

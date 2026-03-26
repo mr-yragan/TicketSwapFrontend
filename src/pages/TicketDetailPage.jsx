@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, MapPin, User, Info, Building2, MessageSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { useTicket } from '@/hooks/useTicket'
 import PurchaseButton from '@/components/PurchaseButton'
 

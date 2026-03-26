@@ -1,19 +1,17 @@
 const SORT_OPTIONS = [
   { value: 'date-asc', label: 'Сначала новые' },
-  { value:  'price-asc', label: 'Дешевле' },
+  { value: 'price-asc', label: 'Дешевле' },
   { value: 'price-desc', label: 'Дороже' },
 ]
 
+const INPUT_BASE_CLASSES = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black'
+
 export function FiltersPanel({ filters, onFilterChange, availableCities = [] }) {
-  const inputBaseClasses = "w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-  
   const handlePriceChange = (e) => {
     const val = e.target.value
-    if (val && parseInt(val) < 0) {
-      return
+    if (!val || parseInt(val) >= 0) {
+      onFilterChange('maxPrice', val)
     }
-    
-    onFilterChange('maxPrice', val)
   }
 
   const cityOptions = [
@@ -28,26 +26,21 @@ export function FiltersPanel({ filters, onFilterChange, availableCities = [] }) 
     <aside className="w-64 flex-shrink-0">
       <div className="bg-white rounded-2xl border border-gray-300 p-6 shadow-sm">
         <h2 className="text-xl font-bold mb-6">Фильтры</h2>
+
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Город
-          </label>
-          <select 
+          <label className="block text-sm font-medium text-gray-700 mb-2">Город</label>
+          <select
             value={filters.city || ''}
             onChange={(e) => onFilterChange('city', e.target.value)}
-            className={inputBaseClasses}>
+            className={INPUT_BASE_CLASSES}>
             {cityOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))} 
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Макс. цена
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Макс. цена</label>
           <input
             type="number"
             value={filters.maxPrice || ''}
@@ -55,7 +48,8 @@ export function FiltersPanel({ filters, onFilterChange, availableCities = [] }) 
             placeholder="не ограничено"
             min="0"
             step="1000"
-            className={`${inputBaseClasses} focus:border-transparent`}/>
+            className={INPUT_BASE_CLASSES}
+          />
           {filters.maxPrice && (
             <span className="text-xs text-gray-500 mt-1 block">
               до {parseInt(filters.maxPrice).toLocaleString('ru-RU')} ₽
@@ -64,13 +58,11 @@ export function FiltersPanel({ filters, onFilterChange, availableCities = [] }) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Сортировка
-          </label>
-          <select 
+          <label className="block text-sm font-medium text-gray-700 mb-2">Сортировка</label>
+          <select
             value={filters.sortBy || 'date-asc'}
-            onChange={(e) => onFilterChange('sortBy', e.target. value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:outline-none">
+            onChange={(e) => onFilterChange('sortBy', e.target.value)}
+            className={INPUT_BASE_CLASSES}>
             {SORT_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
             ))}

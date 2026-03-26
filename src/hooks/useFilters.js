@@ -1,30 +1,29 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
+const defaultFilters = {
+  city: '',
+  maxPrice: '',
+  sortBy: 'date-asc',
+  search: '',
+}
 
 export function useFilters(initialFilters = {}) {
   const [filters, setFilters] = useState({
-    city: '',
-    maxPrice: '',
-    sortBy: 'date-asc',
-    search: '',
+    ...defaultFilters,
     ...initialFilters,
   })
 
-  const updateFilter = (key, value) => {
-    setFilters(prev => (
-      { ...prev, [key]: value }
+  const updateFilter = useCallback((key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+  }, [])
 
-    ))
-  }
+  const resetFilters = useCallback(() => {
+    setFilters(defaultFilters)
+  }, [])
 
-  const resetFilters = () => {
-    setFilters({
-      city: '',
-      maxPrice: '',
-      sortBy: 'date-asc',
-      search: '',
-    })
-  }
-
-  return { filters, updateFilter, resetFilters }
+  return useMemo(() => ({
+    filters,
+    updateFilter,
+    resetFilters,
+  }), [filters, updateFilter, resetFilters])
 }

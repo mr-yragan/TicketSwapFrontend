@@ -1,5 +1,5 @@
-import { createContext, useState } from 'react'
-import { authApi, profileApi } from '@/api/apiClient'
+import { createContext, useState, useMemo } from 'react'
+import { useAuthLogic } from './useAuthLogic'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null)
@@ -20,80 +20,20 @@ export function AuthProvider({ children }) {
     return null
   })
 
-  const [authToken, setAuthToken] = useState(() => localStorage.getItem('token'))
+  const { login, register, logout } = useAuthLogic(setCurrentUser)
 
-  const login = async (email, password) => {
-    if (!email || !password) {
-      return { success: false, error: 'Заполните все поля' }
-    }
-
-    const result = await authApi.login(email, password)
-
-    if (!result.success) {
-      return result
-    }
-
-    const { token } = result.data
-
-    if (!token) {
-      return { success: false, error: 'Токен не получен' }
-    }
-
-    localStorage.setItem('token', token)
-    localStorage.setItem('email', email)
-
-    setAuthToken(token)
-
-    try {
-      const profile = await profileApi.getProfile()
-      const userWithId = {
-        email,
-        token,
-        id: profile.id
-      }
-      localStorage.setItem('userId', profile.id)
-      setCurrentUser(userWithId)
-    } catch (profileErr) {
-      console.error('Не удалось загрузить профиль, используем базовые данные:', profileErr)
-      setCurrentUser({ email, token })
-    }
-
-    return { success: true }
-  }
-
-  const register = async (email, password) => {
-    const result = await authApi.register(email, password)
-
-    if (!result.success) {
-      return result
-    }
-
-    return await login(email, password)
-  }
-
-  const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('email')
-    localStorage.removeItem('userId')
-    setAuthToken(null)
-    setCurrentUser(null)
-  }
-
-  const checkAuth = () => {
-    return !!authToken && !!currentUser
-  }
+  // Мемоизируем value для избежания лишних рендеров
+  const value = useMemo(() => ({
+    user: currentUser,
+    token: currentUser?.token,
+    login,
+    register,
+    logout,
+    isAuthenticated: !!currentUser?.token,
+  }), [currentUser, login, register, logout])
 
   return (
-    <AuthContext.Provider 
-      value={{
-        user: currentUser,
-        token: authToken,
-        login,
-        register,
-        logout,
-        isAuthenticated: checkAuth(),
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

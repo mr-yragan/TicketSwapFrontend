@@ -9,6 +9,11 @@
   }
 }
 
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @keyframes slideIn {
   from {
     transform: translateY(-20px);
@@ -20,6 +25,16 @@
   }
 }
 
+@keyframes scaleIn {
+  from { transform: scale(0.98) translateY(-6px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes scaleOut {
+  from { transform: scale(1) translateY(0); opacity: 1; }
+  to { transform: scale(0.98) translateY(-6px); opacity: 0; }
+}
+
 .modal-overlay {
   animation: fadeIn 180ms ease forwards;
 }
@@ -27,3 +42,27 @@
 .modal-card {
   animation: scaleIn 200ms ease forwards;
 }
+
+/* closing state */
+.modal-closing.modal-overlay {
+  animation: fadeOut 160ms ease forwards;
+}
+
+.modal-closing .modal-card {
+  animation: scaleOut 160ms ease forwards;
+}
+
+/* Radix Dialog animations */
+[data-radix-dialog-overlay] {
+  animation: fadeIn 200ms ease-out;
+}
+
+[data-radix-dialog-content] {
+  animation: scaleIn 200ms ease-out;
+}
+
+/* Suppressing Radix focus styles to prevent conflicts */
+[data-radix-dialog-content]:focus {
+  outline: none;
+}
+

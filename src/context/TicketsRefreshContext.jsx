@@ -1,28 +1,35 @@
-import { createContext, useContext, useCallback, useState } from 'react'
+import { createContext, useContext, useCallback, useRef } from 'react'
 
 const TicketsRefreshContext = createContext(null)
 
 export function TicketsRefreshProvider({ children }) {
-  const [refreshCallbacks, setRefreshCallbacks] = useState([])
+  const callbacksRef = useRef(new Set())
 
   const registerRefresh = useCallback((callback) => {
-    setRefreshCallbacks(prev => [...prev, callback])
+    callbacksRef.current.add(callback)
+
     return () => {
-      setRefreshCallbacks(prev => prev.filter(cb => cb !== callback))
+      callbacksRef.current.delete(callback)
     }
   }, [])
 
   const triggerRefresh = useCallback(() => {
-    refreshCallbacks.forEach(callback => callback())
-  }, [refreshCallbacks])
+    callbacksRef.current.forEach(callback => callback())
+  }, [])
+
+  const value = {
+    registerRefresh,
+    triggerRefresh
+  }
 
   return (
-    <TicketsRefreshContext.Provider value={{ registerRefresh, triggerRefresh }}>
+    <TicketsRefreshContext.Provider value={value}>
       {children}
     </TicketsRefreshContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTicketsRefresh() {
   const context = useContext(TicketsRefreshContext)
   if (!context) {

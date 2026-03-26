@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useMemo } from 'react'
 
 const ModalContext = createContext(null)
 
@@ -13,13 +13,20 @@ export function ModalProvider({ children }) {
     setCurrentModal(null)
   }
 
+  const value = useMemo(() => ({
+    currentModal,
+    openModal,
+    closeModal
+  }), [currentModal])
+
   return (
-    <ModalContext.Provider value={{ currentModal, openModal, closeModal }}>
+    <ModalContext.Provider value={value}>
       {children}
     </ModalContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useModal() {
   const context = useContext(ModalContext)
   if (!context) {

@@ -1,28 +1,25 @@
 import { useModal } from '@/context/ModalContext'
+import { Modal } from '@/components/ui'
+import { X } from 'lucide-react'
 import SellTicketForm from '@/components/SellTicketForm'
-
 
 export function SellTicketModal() {
   const { closeModal } = useModal()
 
   const handleSuccess = () => {
-    setTimeout(() => {
-      closeModal()
-    }, 1500)
+    setTimeout(closeModal, 1500)
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 modal-overlay">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl relative modal-overlay">
-        <button
-          onClick={closeModal}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"> ×
-        </button>
+    <Modal onClose={closeModal}>
+      <button
+        onClick={closeModal}
+        className="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+        <X size={24} />
+      </button>
 
-        <h2 className="text-xl font-semibold mb-4">Создать объявление о продаже</h2>
-
-        <SellTicketForm onSuccess={handleSuccess} />
-      </div>
-    </div>
+      <h2 className="text-xl font-semibold mb-4">Создать объявление о продаже</h2>
+      <SellTicketForm onSuccess={handleSuccess} />
+    </Modal>
   )
 }

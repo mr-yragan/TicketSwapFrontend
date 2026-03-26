@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { formatPrice, formatDate, getTicketField } from '@/utils/ticketFormatters'
 
 export function TicketCard({ ticket }) {
   const navigate = useNavigate()
@@ -6,26 +7,10 @@ export function TicketCard({ ticket }) {
   const goToTicket = () => {
     navigate(`/ticket/${ticket?.id}`)
   }
-  
-  const formatPrice = (price) => {
-    if (!price) return '—'
-    return `${price} ₽`
-  }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return dateString
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    })
-  }
-
-  const artist = ticket?.artist || ticket?.eventName || 'Событие'
-  const venue = ticket?.venue || ticket?.organizer || 'Место уточняется'
-  const date = ticket?.date || ticket?.eventDate || ''
+  const artist = getTicketField(ticket, 'eventName', 'artist') || 'Событие'
+  const venue = getTicketField(ticket, 'venue', 'organizer') || 'Место уточняется'
+  const date = getTicketField(ticket, 'eventDate', 'date') || ''
   const verified = !!ticket?.verified
 
   return (
@@ -48,6 +33,11 @@ export function TicketCard({ ticket }) {
       <div className="grow"></div>
       <div className="flex items-center justify-between mt-auto">
         <span className="text-sm text-gray-500">{formatDate(date)}</span>
+        <span className="text-lg font-bold">{formatPrice(ticket?.price)}</span>
+      </div>
+    </div>
+  )
+}
         <span className="font-bold text-lg">{formatPrice(ticket?.price)}</span>
       </div>
     </div>

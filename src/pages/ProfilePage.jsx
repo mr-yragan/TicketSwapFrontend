@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/useAuth'
-import { Button } from '@/components/ui/button'
-import { profileApi } from '@/api/apiClient'
-import { purchaseApi } from '@/api/purchaseApi'
+import { Button } from '@/components/ui'
+import { profileApi } from '@/api'
 import { useLocation } from 'react-router-dom'
 
 function TicketCard({ ticket }) {
@@ -51,7 +50,7 @@ export default function ProfilePage() {
                 setTickets(Array.isArray(data) ? data : [])
 
                 try {
-                    const purchasesData = await purchaseApi.getMyPurchases('active')
+                    const purchasesData = await profileApi.getMyPurchases('active')
                     setPurchases(Array.isArray(purchasesData) ? purchasesData : [])
                 } catch (purchaseError) {
                     console.error('Ошибка загрузки покупок:', purchaseError)
@@ -108,19 +107,19 @@ export default function ProfilePage() {
                     <div className="flex gap-2">
                         <Button
                             onClick={() => setTab('my-listings')}
-                            variant={tab === 'my-listings' ? 'default' : 'ghost'}
+                            className={tab === 'my-listings' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                         >
                             Мои объявления ({tickets.length})
                         </Button>
                         <Button
                             onClick={() => setTab('upcoming-purchases')}
-                            variant={tab === 'upcoming-purchases' ? 'default' : 'ghost'}
+                            className={tab === 'upcoming-purchases' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                         >
                             Предстоящие события ({upcomingPurchases.length})
                         </Button>
                         <Button
                             onClick={() => setTab('past-purchases')}
-                            variant={tab === 'past-purchases' ? 'default' : 'ghost'}
+                            className={tab === 'past-purchases' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                         >
                             Прошедшие события ({pastPurchases.length})
                         </Button>
