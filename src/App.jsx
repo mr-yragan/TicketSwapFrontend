@@ -1,16 +1,20 @@
 import './index.css'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { ModalProvider, useModal } from './context/ModalContext'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, ModalProvider, TicketsRefreshProvider, useModal } from '@/context'
 import { Header } from './components/Header'
 import { LoginModal } from './components/LoginModal'
 import { RegisterModal } from './components/RegisterModal'
 import { SellTicketModal } from './components/SellTicketModal'
+import { TwoFactorModal } from './components/TwoFactorModal'
+import { ForgotPasswordModal } from './components/ForgotPasswordModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import HomePage from './pages/HomePage'
 import TicketDetailPage from './pages/TicketDetailPage'
 import ProfilePage from './pages/ProfilePage'
-import { TicketsRefreshProvider } from '@/context/TicketsRefreshContext'
+import OrganizerPage from './pages/OrganizerPage'
+import AdminPage from './pages/AdminPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 
 function AppContent() {
   const { currentModal } = useModal()
@@ -22,11 +26,17 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/ticket/:id" element={<TicketDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/organizer" element={<OrganizerPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Routes>
 
       {currentModal === 'login' && <LoginModal />}
       {currentModal === 'register' && <RegisterModal />}
       {currentModal === 'sell' && <SellTicketModal />}
+      {currentModal === 'twoFactor' && <TwoFactorModal />}
+      {currentModal === 'forgotPassword' && <ForgotPasswordModal />}
     </div>
   )
 }

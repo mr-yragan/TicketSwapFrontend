@@ -1,23 +1,24 @@
-import apiClient from '../apiClient'
+import { getData, patchData } from '../request'
 
 export const profileApi = {
+  /**
+   * Получить профиль текущего пользователя
+   * @returns {Promise<Object>} { id, email, login, emailVerified, role }
+   */
   async getProfile() {
-    const response = await apiClient.get('/me')
-    return response.data
+    return await getData('/me')
   },
 
-  async getMyListings() {
-    const response = await apiClient.get('/me/listings')
-    return response.data
-  },
+  /**
+   * Обновить профиль
+   * @param {Object} payload
+   * @param {string} [payload.login]
+   * @returns {Promise<Object>} обновленные данные профиля
+   */
+  async updateProfile(payload) {
+    const body = {}
+    if (payload?.login) body.login = payload.login
 
-  async getMyPurchases(scope = 'active') {
-    const response = await apiClient.get('/me/purchases', { params: { scope } })
-    return response.data
-  },
-
-  async getMyHolds() {
-    const response = await apiClient.get('/me/holds')
-    return response.data
+    return await patchData('/me', body)
   },
 }

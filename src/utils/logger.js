@@ -1,4 +1,4 @@
-сonst LOG_LEVELS = {
+const LOG_LEVELS = {
   ERROR: 'ERROR',
   WARN: 'WARN',
   INFO: 'INFO',

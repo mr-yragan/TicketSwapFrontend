@@ -1,14 +1,10 @@
-import { useModal } from '@/context/ModalContext'
+import { useModal } from '@/context'
 import { Modal } from '@/components/ui'
 import { X } from 'lucide-react'
 import SellTicketForm from '@/components/SellTicketForm'
 
 export function SellTicketModal() {
   const { closeModal } = useModal()
-
-  const handleSuccess = () => {
-    setTimeout(closeModal, 1500)
-  }
 
   return (
     <Modal onClose={closeModal}>
@@ -19,7 +15,7 @@ export function SellTicketModal() {
       </button>
 
       <h2 className="text-xl font-semibold mb-4">Создать объявление о продаже</h2>
-      <SellTicketForm onSuccess={handleSuccess} />
+      <SellTicketForm />
     </Modal>
   )
 }

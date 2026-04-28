@@ -7,22 +7,43 @@ export function useTicket(id) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchTicket = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const data = await ticketsApi.getById(id)
-        setTicket(data)
+        if (!cancelled) {
+          setLoading(true)
+          setError(null)
+        }
+        const [view, history] = await Promise.all([
+          ticketsApi.getById(id),
+          ticketsApi.getStatusHistory(id).catch(() => []),
+        ])
+
+        if (!cancelled) {
+          setTicket({
+            ...view,
+            statusHistory: Array.isArray(history) ? history : [],
+          })
+        }
       } catch (err) {
-        setError(err.message || 'Ошибка загрузки билета')
-        setTicket(null)
+        if (!cancelled) {
+          setError(err.message || 'Ошибка загрузки билета')
+          setTicket(null)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     if (id) {
       fetchTicket()
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [id])
 

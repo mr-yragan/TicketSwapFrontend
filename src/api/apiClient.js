@@ -3,7 +3,7 @@ import { Logger } from '@/utils/logger'
 import { API_CONFIG } from '@/config/constants'
 
 const apiClient = axios.create({
-  baseURL: API_CONFIG.BASE_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +16,11 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    Logger.debug(`→ ${config.method?.toUpperCase()} ${config.url}`)
+
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     return config
   },
   (error) => {
@@ -27,16 +31,12 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    Logger.debug(`← ${response.status} ${response.config.url}`)
     return response
   },
   (error) => {
+
     if (error.response?.status === 401) {
-      Logger.warn('Unauthorized - очищаем данные')
-      localStorage.removeItem('token')
-      localStorage.removeItem('email')
-      localStorage.removeItem('userId')
-      window.location.href = '/'
+      Logger.warn('Unauthorized response received')
     }
 
     if (error.response) {

@@ -1,4 +1,5 @@
 export { Button } from './button'
+export { DismissibleAlert } from './dismissibleAlert'
 export { Modal } from './modal'
 export { Input } from './input'
 export { FormField } from './formField'

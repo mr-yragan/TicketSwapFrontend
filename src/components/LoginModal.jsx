@@ -1,17 +1,59 @@
-import { useModal } from '@/context/ModalContext'
-import { useAuth } from '@/context/useAuth'
-import { Button, Modal, FormField } from '@/components/ui'
+import { useModal } from '@/context'
+import { useAuth } from '@/context'
+import { Button, DismissibleAlert, FormField, Modal } from '@/components/ui'
 import { X } from 'lucide-react'
 import { useLoginForm } from '@/hooks/useLoginForm'
+import { authApi } from '@/api'
+import { useState } from 'react'
 
 export function LoginModal() {
-  const { closeModal, openModal } = useModal()
+  const { closeModal, modalData, openModalAfterClose } = useModal()
   const { login } = useAuth()
-  const { form, error, loading, handleFieldChange, handleSubmit } = useLoginForm(closeModal)
+  const [infoMessage, setInfoMessage] = useState(() => (
+    typeof modalData?.message === 'string' ? modalData.message : ''
+  ))
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
+
+  const handleLoginResult = (result) => {
+    if (result?.requiresTwoFactor) {
+      openModalAfterClose('twoFactor', {
+        challengeId: result.challengeId,
+        expiresAt: result.expiresAt,
+        identifier: result.identifier,
+        message: result.message,
+      })
+      return
+    }
+
+    closeModal()
+  }
+
+  const { form, error, loading, handleFieldChange, handleSubmit, setError } = useLoginForm(handleLoginResult)
 
   const handleSwitchToRegister = () => {
-    closeModal()
-    setTimeout(() => openModal('register'), 200)
+    openModalAfterClose('register')
+  }
+
+  const handleForgotPassword = () => {
+    openModalAfterClose('forgotPassword')
+  }
+
+  const handleResendVerification = async () => {
+    if (!form.identifier.includes('@')) {
+      return
+    }
+
+    setResendLoading(true)
+    setResendMessage('')
+    const result = await authApi.resendVerification(form.identifier)
+    setResendLoading(false)
+
+    if (result.success) {
+      setResendMessage(result.data?.message || 'Письмо подтверждения отправлено')
+    } else {
+      setResendMessage(result.error || 'Не удалось отправить письмо подтверждения')
+    }
   }
 
   return (
@@ -25,17 +67,29 @@ export function LoginModal() {
       <h1 className="text-2xl font-bold text-center mb-6">Авторизация</h1>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <DismissibleAlert tone="error" onDismiss={() => setError('')}>
           {error}
-        </div>
+        </DismissibleAlert>
+      )}
+
+      {infoMessage && (
+        <DismissibleAlert tone="info" onDismiss={() => setInfoMessage('')}>
+          {infoMessage}
+        </DismissibleAlert>
+      )}
+
+      {resendMessage && (
+        <DismissibleAlert tone="info" onDismiss={() => setResendMessage('')}>
+          {resendMessage}
+        </DismissibleAlert>
       )}
 
       <form className="space-y-4" onSubmit={(e) => handleSubmit(e, login)}>
         <FormField
-          label="Email или логин"
-          type="email"
-          value={form.email}
-          onChange={(e) => handleFieldChange('email', e.target.value)}
+          label="Почта или логин"
+          type="text"
+          value={form.identifier}
+          onChange={(e) => handleFieldChange('identifier', e.target.value)}
           placeholder="Введите почту или логин"
           required
         />
@@ -59,6 +113,27 @@ export function LoginModal() {
           {loading ? 'Вход...' : 'Вход'}
         </Button>
       </form>
+
+      <div className="text-center text-sm mt-4">
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          className="text-blue-500 hover:text-blue-700 font-medium">
+          Забыли пароль?
+        </button>
+      </div>
+
+      {error?.includes('Email is not verified') && form.identifier.includes('@') && (
+        <div className="text-center text-sm mt-3">
+          <button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resendLoading}
+            className="text-blue-500 hover:text-blue-700 font-medium disabled:opacity-50">
+            {resendLoading ? 'Отправка...' : 'Отправить письмо подтверждения ещё раз'}
+          </button>
+        </div>
+      )}
 
       <div className="text-center text-sm mt-6">
         <button

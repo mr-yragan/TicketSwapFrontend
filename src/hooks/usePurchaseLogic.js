@@ -17,23 +17,36 @@ export function usePurchaseLogic() {
     setError(null)
 
     try {
-      await ticketsApi.buy(listingId)
+      const response = await ticketsApi.buy(listingId)
+      const reissuedTicketUid = response?.reissuedTicketUid || null
 
       navigate('/profile', {
         state: {
-          message: 'Билет успешно приобретён!',
+          message: reissuedTicketUid
+            ? `Билет успешно приобретён! Новый билет перевыпущен: ${reissuedTicketUid}`
+            : 'Билет успешно приобретён!',
           tab: 'upcoming-purchases',
-          refreshPurchases: true
+          refreshPurchases: true,
+          reissuedTicketUid,
         }
       })
+
+      return response
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Не удалось купить билет'
       setError(msg)
+      return null
+    } finally {
       setLoading(false)
     }
   }, [loading])
 
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+
   return {
+    clearError,
     loading,
     error,
     handlePurchase,

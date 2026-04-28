@@ -1,240 +1,330 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/context/useAuth'
-import { Button } from '@/components/ui'
-import { profileApi } from '@/api'
-import { useLocation } from 'react-router-dom'
+import { useAuth, useModal } from '@/context'
+import { authApi, listingsApi, profileApi, purchaseApi, purchasesApi, twoFactorApi } from '@/api'
+import { formatErrorMessage } from '@/api/formatters'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ProfilePageHeader } from './profile/ProfilePageHeader'
+import { ProfilePageAlerts } from './profile/ProfilePageAlerts'
+import { ProfilePageTabs } from './profile/ProfilePageTabs'
 
-function TicketCard({ ticket }) {
-    const eventDate = ticket?.eventDate ? new Date(ticket.eventDate) : null
-    const dateText = eventDate ? eventDate.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    }) : 'Дата не указана'
-
-    return (
-        <div className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-start gap-4">
-            <div>
-                <h3 className="text-lg font-semibold">{ticket?.eventName || 'Без названия'}</h3>
-                <p className="text-sm text-gray-600 mt-2">{dateText}</p>
-                <p className="text-xs text-gray-500 mt-1">ID: {ticket?.uid || ticket?.id}</p>
-            </div>
-            <div className="text-right">
-                <span className="text-xs text-gray-400 block">Цена продажи</span>
-                <div className="text-lg font-medium">{ticket?.resalePrice ? `${ticket.resalePrice} ₽` : '-'}</div>
-                <span className="text-xs text-gray-400 block mt-1">Оригинал: {ticket?.originalPrice ? `${ticket.originalPrice} ₽` : '-'}</span>
-            </div>
-        </div>
-    )
-}
+const LOGIN_PATTERN = /^(?!.*@)[A-Za-z0-9_.-]+$/
 
 export default function ProfilePage() {
-    const { user } = useAuth() || {}
-    const location = useLocation()
-    const [tickets, setTickets] = useState([])
-    const [purchases, setPurchases] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-    const [successMessage, setSuccessMessage] = useState('')
-    const [tab, setTab] = useState('upcoming-purchases')
+  const { user, logout } = useAuth() || {}
+  const { openModal } = useModal()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [activeListings, setActiveListings] = useState([])
+  const [archivedListings, setArchivedListings] = useState([])
+  const [upcomingPurchases, setUpcomingPurchases] = useState([])
+  const [pastPurchases, setPastPurchases] = useState([])
+  const [activeHolds, setActiveHolds] = useState([])
+  const [purchaseOrders, setPurchaseOrders] = useState([])
+  const [ordersSupported, setOrdersSupported] = useState(true)
+  const [ordersError, setOrdersError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [tab, setTab] = useState('upcoming-purchases')
+  const [settingsSection, setSettingsSection] = useState('profile')
+  const [holdActionId, setHoldActionId] = useState(null)
+  const [verificationLoading, setVerificationLoading] = useState(false)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false)
+  const [twoFactorSupported, setTwoFactorSupported] = useState(true)
+  const [profileForm, setProfileForm] = useState({ login: '' })
+  const [profileSaving, setProfileSaving] = useState(false)
 
-    useEffect(() => {
-        if (!user) return
-        const loadTickets = async () => {
-            setLoading(true)
-            setError('')
-            try {
-                const data = await profileApi.getMyListings()
-                setTickets(Array.isArray(data) ? data : [])
+  // Используем emailVerified из user (AuthContext), не из локального состояния
+  const emailVerified = user?.emailVerified ?? false
 
-                try {
-                    const purchasesData = await profileApi.getMyPurchases('active')
-                    setPurchases(Array.isArray(purchasesData) ? purchasesData : [])
-                } catch (purchaseError) {
-                    console.error('Ошибка загрузки покупок:', purchaseError)
-                }
-            } catch (e) {
-                console.error('Ошибка загрузки билетов:', e)
-                setError(e.message || 'Не удалось загрузить билеты')
+  useEffect(() => {
+    if (!user) return
 
-                if (e.response?.status === 401) {
-                    setTimeout(() => window.location.href = '/', 2000)
-                }
-            } finally {
-                setLoading(false)
-            }
+    const loadTickets = async () => {
+      setLoading(true)
+      setError('')
+      setOrdersError('')
+      try {
+        const profile = await profileApi.getProfile()
+        const legacyProfileShape = Object.prototype.hasOwnProperty.call(profile ?? {}, 'phoneNumber')
+
+        setOrdersSupported(!legacyProfileShape)
+        // Обновляем только профиль-форму, но не переписываем emailVerified
+        setProfileForm({
+          login: profile?.login || '',
+        })
+
+        const twoFactorStatus = await twoFactorApi.getTwoFactorStatus()
+        if (twoFactorStatus?.unsupported) {
+          setTwoFactorSupported(false)
+        } else if (twoFactorStatus?.unavailable) {
+          setTwoFactorSupported(false)
+        } else if (typeof twoFactorStatus?.twoFactorEnabled === 'boolean') {
+          setTwoFactorEnabled(twoFactorStatus.twoFactorEnabled)
+          setTwoFactorSupported(true)
+        } else {
+          setTwoFactorSupported(false)
         }
-        loadTickets()
-    }, [user])
 
-    useEffect(() => {
-        if (location.state?.message) {
-            setSuccessMessage(location.state.message)
-            setTimeout(() => setSuccessMessage(''), 5000)
+        const [
+          activeListingsData,
+          archivedListingsData,
+          activePurchasesData,
+          archivedPurchasesData,
+          holdsData,
+        ] = await Promise.all([
+          listingsApi.getMyListings('active'),
+          listingsApi.getMyListings('archived'),
+          purchasesApi.getMyPurchases('active'),
+          purchasesApi.getMyPurchases('archived'),
+          purchasesApi.getMyHolds(),
+        ])
+
+        setActiveListings(Array.isArray(activeListingsData) ? activeListingsData : [])
+        setArchivedListings(Array.isArray(archivedListingsData) ? archivedListingsData : [])
+        setUpcomingPurchases(Array.isArray(activePurchasesData) ? activePurchasesData : [])
+        setPastPurchases(Array.isArray(archivedPurchasesData) ? archivedPurchasesData : [])
+        setActiveHolds(Array.isArray(holdsData) ? holdsData : [])
+
+        if (legacyProfileShape) {
+          setPurchaseOrders([])
+          return
         }
-        if (location.state?.tab) {
-            setTab(location.state.tab)
+
+        try {
+          const ordersData = await purchasesApi.getMyOrders()
+          setPurchaseOrders(Array.isArray(ordersData) ? ordersData : [])
+        } catch (ordersFetchError) {
+          console.error('Ошибка загрузки журнала заказов:', ordersFetchError)
+
+          const status = ordersFetchError?.response?.status
+          if (status === 401 || status === 403) {
+            throw ordersFetchError
+          }
+
+          setPurchaseOrders([])
+          setOrdersError('Журнал заказов временно недоступен. Остальные разделы кабинета загружены.')
         }
-        window.history.replaceState({}, document.title)
-    }, [location])
+      } catch (e) {
+        console.error('Ошибка загрузки билетов:', e)
+        const status = e?.response?.status
+        if (status === 401 || status === 403) {
+          setError('Сессия истекла. Войдите снова.')
+        } else {
+          setError(e?.response?.data?.message || e.message || 'Не удалось загрузить билеты')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    const now = new Date()
+    loadTickets()
+  }, [user])
 
-    const upcomingListings = tickets.filter(t => {
-        const d = t?.eventDate ? new Date(t.eventDate) : null
-        return d ? d >= now : true
-    })
+  useEffect(() => {
+    if (!ordersSupported && tab === 'orders') {
+      setTab('upcoming-purchases')
+    }
+  }, [ordersSupported, tab])
 
-    const upcomingPurchases = purchases.filter(p => {
-        const d = p?.eventDate ? new Date(p.eventDate) : null
-        return d ? d >= now : true
-    })
-    const pastPurchases = purchases.filter(p => {
-        const d = p?.eventDate ? new Date(p.eventDate) : null
-        return d ? d < now : false
-    })
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message)
+    }
+    if (location.state?.tab) {
+      setTab(location.state.tab)
+    }
+    if (location.state?.settingsSection) {
+      setSettingsSection(location.state.settingsSection)
+    }
+    window.history.replaceState({}, document.title)
+  }, [location])
 
-    return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-2xl p-6 mb-6 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold">Личный кабинет</h1>
-                        <p className="text-sm text-gray-500">Пользователь: {user?.email || 'гость'}</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => setTab('my-listings')}
-                            className={tab === 'my-listings' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
-                        >
-                            Мои объявления ({tickets.length})
-                        </Button>
-                        <Button
-                            onClick={() => setTab('upcoming-purchases')}
-                            className={tab === 'upcoming-purchases' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
-                        >
-                            Предстоящие события ({upcomingPurchases.length})
-                        </Button>
-                        <Button
-                            onClick={() => setTab('past-purchases')}
-                            className={tab === 'past-purchases' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
-                        >
-                            Прошедшие события ({pastPurchases.length})
-                        </Button>
-                    </div>
-                </div>
+  const handleOpenSettings = (section = 'profile') => {
+    setSettingsSection(section)
+    setTab('settings')
+  }
 
-                {successMessage && (
-                    <div className="bg-green-50 border-2 border-green-200 text-green-700 rounded-xl p-4 mb-4 flex items-center justify-between">
-                        <span className="font-medium">✅ {successMessage}</span>
-                        <button
-                            onClick={() => setSuccessMessage('')}
-                            className="text-green-700 hover:text-green-900 font-bold">✕
-                        </button>
-                    </div>
-                )}
+  const handleReleaseHold = async (hold) => {
+    const listingId = hold?.listing?.id
+    if (!listingId) {
+      setError('Не удалось определить объявление для снятия резерва')
+      return
+    }
 
-                <div className="space-y-4">
-                    {loading && (
-                        <div className="p-6 bg-white rounded-xl text-center text-gray-600">
-                            Загрузка билетов...
-                        </div>
-                    )}
+    setHoldActionId(hold.id)
+    setError('')
 
-                    {error && (
-                        <div className="p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
-                            {error}
-                        </div>
-                    )}
+    try {
+      await purchaseApi.releaseHold(listingId)
+      setActiveHolds((current) => current.filter((item) => item.id !== hold.id))
+      setSuccessMessage('Резерв снят')
+    } catch (releaseError) {
+      console.error('Ошибка снятия резерва:', releaseError)
+      setError(formatErrorMessage(releaseError, 'Не удалось снять резерв'))
+    } finally {
+      setHoldActionId(null)
+    }
+  }
 
-                    {!loading && !error && (
-                        <div>
-                            {tab === 'my-listings' && (
-                                upcomingListings.length === 0 ? (
-                                    <div className="p-6 bg-white rounded-xl text-center text-gray-500">
-                                        У вас нет активных объявлений
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-4">
-                                        {upcomingListings.map(t => <TicketCard key={t.id} ticket={t} />)}
-                                    </div>
-                                )
-                            )}
+  const handleResendVerification = async () => {
+    if (!user?.email) return
 
-                            {tab === 'upcoming-purchases' && (
-                                upcomingPurchases.length === 0 ? (
-                                    <div className="p-6 bg-white rounded-xl text-center text-gray-500">
-                                        Нет предстоящих событий
-                                    </div>) : (
-                                    <div className="grid gap-4">
-                                        {upcomingPurchases.map(p => (
-                                            <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-start gap-4">
-                                                <div>
-                                                    <h3 className="text-lg font-semibold">{p.eventName || 'Без названия'}</h3>
-                                                    <p className="text-sm text-gray-600 mt-2">
-                                                        {p.eventDate ? new Date(p.eventDate).toLocaleDateString('ru-RU', {
-                                                            day: 'numeric',
-                                                            month: 'long',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        }) : 'Дата не указана'}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-1">Место: {p.venue || '-'}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-xs text-gray-400 block">Цена покупки</span>
-                                                    <div className="text-lg font-medium text-green-600">{p.price} ₽</div>
-                                                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded mt-2 inline-block">
-                                                        Куплено
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )
-                            )}
+    setVerificationLoading(true)
+    setError('')
 
-                            {tab === 'past-purchases' && (
-                                pastPurchases.length === 0 ? (
-                                    <div className="p-6 bg-white rounded-xl text-center text-gray-500">
-                                        Нет прошедших событий
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-4">
-                                        {pastPurchases.map(p => (
-                                            <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-start gap-4 opacity-75">
-                                                <div>
-                                                    <h3 className="text-lg font-semibold">{p.eventName || 'Без названия'}</h3>
-                                                    <p className="text-sm text-gray-600 mt-2">
-                                                        {p.eventDate ? new Date(p.eventDate).toLocaleDateString('ru-RU', {
-                                                            day: 'numeric',
-                                                            month: 'long',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        }) : 'Дата не указана'}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-1">Место: {p.venue || '-'}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-xs text-gray-400 block">Цена покупки</span>
-                                                    <div className="text-lg font-medium text-gray-600">{p.price} ₽</div>
-                                                    <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-1 rounded mt-2 inline-block">
-                                                        Завершено
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
+    try {
+      const result = await authApi.resendVerification(user.email)
+      if (!result.success) {
+        setError(result.error || 'Не удалось отправить письмо подтверждения')
+        return
+      }
+
+      setSuccessMessage(result.data?.message || 'Письмо подтверждения отправлено')
+    } catch (e) {
+      console.error('Ошибка отправки письма подтверждения:', e)
+      setError(e?.response?.data?.message || 'Не удалось отправить письмо подтверждения')
+    } finally {
+      setVerificationLoading(false)
+    }
+  }
+
+  const handleToggleTwoFactor = async (nextValue, password) => {
+    if (!twoFactorSupported) {
+      setError('Настройка 2FA недоступна в текущей версии бэкенда')
+      return
+    }
+
+    const normalizedPassword = typeof password === 'string' ? password.trim() : ''
+    if (!normalizedPassword) {
+      setError('Введите текущий пароль, чтобы изменить настройку 2FA')
+      return
+    }
+
+    const targetState = typeof nextValue === 'boolean' ? nextValue : !twoFactorEnabled
+    setTwoFactorLoading(true)
+    setError('')
+
+    try {
+      const response = targetState
+        ? await twoFactorApi.enableTwoFactor(normalizedPassword)
+        : await twoFactorApi.disableTwoFactor(normalizedPassword)
+
+      if (response?.unsupported) {
+        setTwoFactorSupported(false)
+        setError('Настройка 2FA недоступна в текущей версии бэкенда')
+        return
+      }
+
+      const resolvedState = Boolean(response?.twoFactorEnabled)
+      setTwoFactorEnabled(resolvedState)
+      logout?.()
+      navigate('/', { replace: true })
+      openModal('login', {
+        message: resolvedState
+          ? 'Двухэтапная аутентификация включена. Войдите снова, чтобы продолжить.'
+          : 'Двухэтапная аутентификация отключена. Войдите снова, чтобы продолжить.',
+      })
+    } catch (e) {
+      console.error('Ошибка обновления 2FA:', e)
+      setError(e?.response?.data?.message || 'Не удалось обновить настройки 2FA')
+    } finally {
+      setTwoFactorLoading(false)
+    }
+  }
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    setProfileSaving(true)
+    setError('')
+
+    const login = (profileForm.login || '').trim()
+
+    if (login && (!LOGIN_PATTERN.test(login) || login.length < 3 || login.length > 32)) {
+      setError('Логин: 3-32 символа, только буквы, цифры и символы _. -, без @')
+      setProfileSaving(false)
+      return
+    }
+
+    try {
+      const updated = await profileApi.updateProfile({ login })
+      setProfileForm({
+        login: updated?.login || '',
+      })
+      setSuccessMessage('Профиль обновлен')
+    } catch (e) {
+      console.error('Ошибка обновления профиля:', e)
+      if (e?.response?.status === 401) {
+        setError('Сессия истекла. Войдите снова.')
+        logout?.()
+      } else {
+        setError(formatErrorMessage(e, 'Не удалось обновить профиль'))
+      }
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <ProfilePageHeader
+          userEmail={user?.email}
+          emailVerified={emailVerified}
+          verificationLoading={verificationLoading}
+          onResendVerification={handleResendVerification}
+          activeTab={tab}
+          onTabChange={setTab}
+          onOpenSettings={handleOpenSettings}
+          ordersSupported={ordersSupported}
+          counts={{
+            listings: activeListings.length,
+            archivedListings: archivedListings.length,
+            holds: activeHolds.length,
+            upcomingPurchases: upcomingPurchases.length,
+            pastPurchases: pastPurchases.length,
+            orders: purchaseOrders.length,
+          }}
+        />
+
+        <ProfilePageAlerts
+          successMessage={successMessage}
+          onClearSuccess={() => setSuccessMessage('')}
+          error={error}
+          onClearError={() => setError('')}
+        />
+
+        {loading ? (
+          <div className="p-6 bg-white rounded-xl text-center text-gray-600">
+            Загрузка билетов...
+          </div>
+        ) : (
+          <ProfilePageTabs
+            tab={tab}
+            tickets={activeListings}
+            archivedListings={archivedListings}
+            upcomingPurchases={upcomingPurchases}
+            pastPurchases={pastPurchases}
+            activeHolds={activeHolds}
+            purchaseOrders={purchaseOrders}
+            purchaseOrdersError={ordersError}
+            ordersSupported={ordersSupported}
+            holdActionId={holdActionId}
+            profileForm={profileForm}
+            setProfileForm={setProfileForm}
+            onSaveProfile={handleSaveProfile}
+            profileSaving={profileSaving}
+            settingsSection={settingsSection}
+            onSettingsSectionChange={setSettingsSection}
+            onReleaseHold={handleReleaseHold}
+            onToggleTwoFactor={handleToggleTwoFactor}
+            twoFactorEnabled={twoFactorEnabled}
+            twoFactorLoading={twoFactorLoading}
+            twoFactorSupported={twoFactorSupported}
+          />
+        )}
+      </div>
+    </div>
+  )
 }

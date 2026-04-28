@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 
 const initialFormState = {
-  email: '',
+  identifier: '',
   password: '',
 }
 
@@ -15,7 +15,7 @@ export function useLoginForm(onSuccess) {
   }, [])
 
   const validate = useCallback(() => {
-    if (!form.email.trim() || !form.password.trim()) {
+    if (!form.identifier.trim() || !form.password.trim()) {
       return 'Заполните все поля'
     }
     return null
@@ -32,13 +32,21 @@ export function useLoginForm(onSuccess) {
     }
 
     setLoading(true)
-    const result = await login(form.email, form.password)
+    const result = await login(form.identifier, form.password)
     setLoading(false)
 
     if (result.success) {
       setForm(initialFormState)
-      if (onSuccess) onSuccess()
+      if (onSuccess) onSuccess(result)
     } else {
+      if (result.requiresTwoFactor) {
+        setForm(prev => ({ ...prev, password: '' }))
+        if (onSuccess) {
+          onSuccess({ ...result, identifier: form.identifier })
+        }
+        return
+      }
+
       setForm(prev => ({ ...prev, password: '' }))
       setError(result.error || 'Ошибка входа')
     }

@@ -3,6 +3,7 @@ import { AUTH_CONFIG } from '@/config/constants'
 
 const initialFormState = {
   email: '',
+  login: '',
   password: '',
   confirmPassword: '',
 }
@@ -18,8 +19,14 @@ export function useRegisterForm(onSuccess) {
   }, [])
 
   const validate = useCallback(() => {
+    if (!form.email.trim() || !form.login.trim() || !form.password.trim() || !form.confirmPassword.trim()) {
+      return 'Заполните все поля'
+    }
     if (form.password !== form.confirmPassword) {
       return 'Пароли не совпадают'
+    }
+    if (form.login.trim().length < 3) {
+      return 'Логин должен быть не менее 3 символов'
     }
     if (form.password.length < AUTH_CONFIG.MIN_PASSWORD_LENGTH) {
       return `Пароль должен быть не менее ${AUTH_CONFIG.MIN_PASSWORD_LENGTH} символов`
@@ -39,14 +46,14 @@ export function useRegisterForm(onSuccess) {
     }
 
     setLoading(true)
-    const result = await register(form.email, form.password)
+    const result = await register(form.email, form.login, form.password)
     setLoading(false)
 
     if (result.success) {
       setForm(initialFormState)
-      setSuccess('Регистрация прошла успешно')
+      setSuccess(result.data?.message || 'Регистрация прошла успешно. Проверьте почту для подтверждения аккаунта')
       if (onSuccess) {
-        setTimeout(onSuccess, 1200)
+        onSuccess(result)
       }
     } else {
       setForm(prev => ({ ...prev, password: '', confirmPassword: '' }))
@@ -61,6 +68,8 @@ export function useRegisterForm(onSuccess) {
     loading,
     handleFieldChange,
     handleSubmit,
+    setError,
+    setSuccess,
     constants: {
       MIN: AUTH_CONFIG.MIN_PASSWORD_LENGTH,
       MAX: AUTH_CONFIG.MAX_PASSWORD_LENGTH,

@@ -1,6 +1,6 @@
 import { Input } from './input'
 
-export function FormField({ label, error, helperText, ...inputProps }) {
+export function FormField({ label, helperText, ...inputProps }) {
   return (
     <div>
       {label && (

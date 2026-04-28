@@ -1,17 +1,16 @@
-import { useModal } from '@/context/ModalContext'
-import { useAuth } from '@/context/useAuth'
-import { Button, Modal, FormField } from '@/components/ui'
+import { useModal } from '@/context'
+import { useAuth } from '@/context'
+import { Button, DismissibleAlert, Modal, FormField } from '@/components/ui'
 import { X } from 'lucide-react'
 import { useRegisterForm } from '@/hooks/useRegisterForm'
 
 export function RegisterModal() {
-  const { closeModal, openModal } = useModal()
+  const { closeModal, openModalAfterClose } = useModal()
   const { register } = useAuth()
-  const { form, error, success, loading, handleFieldChange, handleSubmit, constants } = useRegisterForm(closeModal)
+  const { form, error, success, loading, handleFieldChange, handleSubmit, constants, setError, setSuccess } = useRegisterForm()
 
   const handleSwitchToLogin = () => {
-    closeModal()
-    setTimeout(() => openModal('login'), 200)
+    openModalAfterClose('login')
   }
 
   return (
@@ -25,15 +24,15 @@ export function RegisterModal() {
       <h1 className="text-2xl font-bold text-center mb-6">Регистрация</h1>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <DismissibleAlert tone="error" onDismiss={() => setError('')}>
           {error}
-        </div>
+        </DismissibleAlert>
       )}
 
       {success && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-800 rounded-lg">
+        <DismissibleAlert tone="success" onDismiss={() => setSuccess('')}>
           {success}
-        </div>
+        </DismissibleAlert>
       )}
 
       <form className="space-y-4" onSubmit={(e) => handleSubmit(e, register)}>
@@ -44,6 +43,18 @@ export function RegisterModal() {
           onChange={(e) => handleFieldChange('email', e.target.value)}
           placeholder="Введите вашу почту"
           required
+        />
+
+        <FormField
+          label="Логин"
+          type="text"
+          value={form.login}
+          onChange={(e) => handleFieldChange('login', e.target.value)}
+          placeholder="Придумайте логин"
+          helperText="3-32 символа: буквы, цифры, _ . -"
+          required
+          minLength={3}
+          maxLength={32}
         />
 
         <FormField
@@ -76,6 +87,10 @@ export function RegisterModal() {
           {loading ? 'Регистрация...' : 'Зарегистрироваться'}
         </Button>
       </form>
+
+      <p className="mt-3 text-xs text-gray-500">
+        После регистрации мы отправим письмо для подтверждения email. Без подтверждения вход будет недоступен.
+      </p>
 
       <div className="text-center text-sm mt-6">
         <span className="text-gray-600">Уже есть аккаунт? </span>

@@ -1,24 +1,15 @@
-import apiClient from '../apiClient'
+import { deleteData, postData } from '../request'
 
 export const purchaseApi = {
   async createHold(listingId) {
-    try {
-      const response = await apiClient.post('/holds', { listingId })
-      console.log('Ответ от сервера:', response.data)
-      return response.data
-    } catch (error) {
-      console.error('Ошибка при создании hold:', error.response?.data || error.message)
-      throw error
-    }
+    return await postData(`/tickets/${listingId}/hold`)
   },
 
-  async completeHold(holdId) {
-    const response = await apiClient.post(`/holds/${holdId}/complete`)
-    return response.data
+  async releaseHold(listingId) {
+    await deleteData(`/tickets/${listingId}/hold`)
   },
 
-  async releaseHold(holdId) {
-    const response = await apiClient.delete(`/holds/${holdId}`)
-    return response.data
+  async completePurchase(listingId) {
+    return await postData(`/tickets/${listingId}/buy`)
   },
 }

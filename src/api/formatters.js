@@ -1,8 +1,35 @@
 export const formatErrorMessage = (error, defaultMessage) => {
-  if (error.response?.data?.fieldErrors) {
-    return Object.entries(error.response.data.fieldErrors)
+  const fieldErrors = error.response?.data?.fieldErrors
+
+  if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+    return fieldErrors.join('; ')
+  }
+
+  if (fieldErrors && typeof fieldErrors === 'object') {
+    return Object.entries(fieldErrors)
       .map(([field, msg]) => `${field}: ${msg}`)
       .join('; ')
   }
+
   return error.response?.data?.message || error.message || defaultMessage
+}
+
+export const normalizeTicketFiles = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.files)) {
+    return payload.files
+  }
+
+  return []
+}
+
+export const normalizeDownloadUrl = (payload) => {
+  if (typeof payload === 'string') {
+    return payload
+  }
+
+  return payload?.url || null
 }

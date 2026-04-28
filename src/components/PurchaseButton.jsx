@@ -1,17 +1,19 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/context/useAuth'
-import { useModal } from '@/context/ModalContext'
-import { Button } from '@/components/ui'
+import { useAuth } from '@/context'
+import { useModal } from '@/context'
+import { Button, DismissibleAlert } from '@/components/ui'
 import { usePurchaseLogic } from '@/hooks/usePurchaseLogic'
 
-const PurchaseButton = ({ listingId, price, disabled, sellerId }) => {
+const PurchaseButton = ({ listingId, price, disabled, sellerId, sellerEmail, status }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { openModal } = useModal()
-  const { loading, error, handlePurchase } = usePurchaseLogic()
+  const { clearError, loading, error, handlePurchase } = usePurchaseLogic()
 
-  const isOwnTicket = user?.id === sellerId
+  const isSold = status === 'COMPLETED'
+  const isOwnTicket = (user?.id != null && sellerId != null && user.id === sellerId)
+    || (user?.email && sellerEmail && user.email === sellerEmail)
   const isButtonDisabled = disabled || loading
 
   const onPurchaseClick = async () => {
@@ -27,10 +29,24 @@ const PurchaseButton = ({ listingId, price, disabled, sellerId }) => {
     await handlePurchase(listingId, navigate)
   }
 
+  if (isSold) {
+    return (
+      <div className="mt-4">
+        <Button
+          type="button"
+          disabled
+          className="w-full cursor-not-allowed border border-gray-300 bg-gray-100 text-gray-500 disabled:opacity-100"
+        >
+          Билет уже продан
+        </Button>
+      </div>
+    )
+  }
+
   if (isOwnTicket) {
     return (
       <div className="mt-4 w-full py-3 px-6 rounded-xl bg-blue-50 border-2 border-blue-200 text-blue-700 text-center font-semibold">
-        Вы продаёте этот билет
+        Ваш билет на продаже
       </div>
     )
   }
@@ -49,9 +65,9 @@ const PurchaseButton = ({ listingId, price, disabled, sellerId }) => {
       </Button>
 
       {error && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <DismissibleAlert tone="error" className="mt-3 mb-0" onDismiss={clearError}>
           {error}
-        </div>
+        </DismissibleAlert>
       )}
     </div>
   )
