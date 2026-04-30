@@ -1,19 +1,20 @@
 export const EMPTY_ORGANIZER_FORM = {
   name: '',
   contactEmail: '',
-  apiKey: '',
+  organizerCode: '',
+  integrationSecret: '',
   verificationMode: 'MANUAL',
 }
 
 export const VERIFICATION_MODES = [
   {
     value: 'MANUAL',
-    label: 'Ручная проверка',
-    description: 'Организатор сам проверяет билеты, ведет события и перевыпускает PDF после покупки.',
+    label: 'Проверка вручную',
+    description: 'Команда организатора сама проверяет билеты, ведёт события и отправляет новый PDF после покупки.',
   },
   {
     value: 'EXTERNAL_API',
-    label: 'Внешний API',
-    description: 'Билеты проходят автоматическую проверку через интеграцию партнера.',
+    label: 'Автоматическая проверка',
+    description: 'Билеты проверяются автоматически через подключённую систему партнёра.',
   },
 ]

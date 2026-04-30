@@ -1,5 +1,44 @@
 import { deleteData, getData, postData, putData } from '../request'
 
+const normalizeOrganizerProfile = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload
+  }
+
+  if (payload.organizer && payload.user) {
+    return {
+      id: payload.organizer.id,
+      name: payload.organizer.name,
+      organizerCode: payload.organizer.apiKey || '',
+      contactEmail: payload.organizer.contactEmail,
+      verificationMode: payload.organizer.verificationMode,
+      banned: Boolean(payload.organizer.banned),
+      legacyUser: payload.user,
+    }
+  }
+
+  return payload
+}
+
+const normalizeOrganizerDashboard = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload
+  }
+
+  if ('organizerName' in payload || 'organizerCode' in payload) {
+    return payload
+  }
+
+  return {
+    organizerId: payload.organizerId,
+    organizerName: payload.name,
+    organizerCode: payload.apiKey || '',
+    pendingValidationCount: payload.pendingValidationCount ?? 0,
+    pendingReissueCount: payload.pendingReissueCount ?? 0,
+    eventsCount: payload.eventsCount ?? 0,
+  }
+}
+
 export const organizerApi = {
   async listPublicOrganizers() {
     return await getData('/organizers')
@@ -19,11 +58,13 @@ export const organizerApi = {
   },
 
   async getOrganizerMe() {
-    return await getData('/organizer/me')
+    const data = await getData('/organizer/me')
+    return normalizeOrganizerProfile(data)
   },
 
   async getOrganizerDashboard() {
-    return await getData('/organizer/dashboard')
+    const data = await getData('/organizer/dashboard')
+    return normalizeOrganizerDashboard(data)
   },
 
   async listEvents() {

@@ -1,33 +1,25 @@
+import { Loader2, RotateCcw } from 'lucide-react'
+import { Button } from '@/components/ui'
+import { formatDateTime } from '../utils'
+
 const ORDER_STATUS_LABELS = {
   CREATED: 'Создан',
   PAYMENT_AUTHORIZED: 'Платёж авторизован',
   PROCESSING_REISSUE: 'Перевыпуск в работе',
   WAITING_MANUAL_REISSUE: 'Ждёт организатора',
   COMPLETED: 'Завершён',
+  FAILED: 'Ошибка',
   REFUND_REQUIRED: 'Нужен возврат',
+  REFUNDED: 'Возвращён',
 }
 
 const PAYMENT_STATUS_LABELS = {
+  NOT_STARTED: 'Не начат',
   AUTHORIZED: 'Авторизован',
   CAPTURED: 'Списан',
   REFUND_REQUIRED: 'Нужен возврат',
-}
-
-const formatDateTime = (value) => {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  REFUNDED: 'Возвращён',
+  FAILED: 'Ошибка',
 }
 
 const formatMoney = (value, currency = 'RUB') => {
@@ -44,7 +36,7 @@ const formatMoney = (value, currency = 'RUB') => {
 const getOrderStatusLabel = (status) => ORDER_STATUS_LABELS[status] || status || '-'
 const getPaymentStatusLabel = (status) => PAYMENT_STATUS_LABELS[status] || status || '-'
 
-export function AdminPurchaseOrdersTable({ error, loading, orders }) {
+export function AdminPurchaseOrdersTable({ actionId, error, loading, onCompleteRefund, orders }) {
   return (
     <section className="min-w-0 rounded-lg border border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
@@ -65,13 +57,15 @@ export function AdminPurchaseOrdersTable({ error, loading, orders }) {
               <th className="px-5 py-3">Статус</th>
               <th className="px-5 py-3">Платёж</th>
               <th className="px-5 py-3">Сумма</th>
+              <th className="px-5 py-3">Операции</th>
               <th className="px-5 py-3">Даты</th>
+              <th className="px-5 py-3 text-right">Действие</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {loading && orders.length === 0 && <TableMessage colSpan={7}>Загрузка заказов...</TableMessage>}
-            {!loading && error && <TableMessage colSpan={7}>{error}</TableMessage>}
-            {!loading && !error && orders.length === 0 && <TableMessage colSpan={7}>Заказов пока нет</TableMessage>}
+            {loading && orders.length === 0 && <TableMessage colSpan={9}>Загрузка заказов...</TableMessage>}
+            {!loading && error && <TableMessage colSpan={9}>{error}</TableMessage>}
+            {!loading && !error && orders.length === 0 && <TableMessage colSpan={9}>Заказов пока нет</TableMessage>}
 
             {orders.map((order) => (
               <tr key={order.id}>
@@ -104,8 +98,32 @@ export function AdminPurchaseOrdersTable({ error, loading, orders }) {
                   {formatMoney(order.amount, order.currency)}
                 </td>
                 <td className="px-5 py-4 text-xs text-gray-500">
+                  <div>payment: {order.paymentOperationId || '-'}</div>
+                  <div className="mt-1">partner: {order.partnerOperationId || '-'}</div>
+                </td>
+                <td className="px-5 py-4 text-xs text-gray-500">
                   <div>Обновлён: {formatDateTime(order.updatedAt)}</div>
                   <div className="mt-1">Завершён: {formatDateTime(order.completedAt)}</div>
+                  <div className="mt-1">Возврат: {formatDateTime(order.refundedAt)}</div>
+                </td>
+                <td className="px-5 py-4 text-right">
+                  {order.status === 'REFUND_REQUIRED' ? (
+                    <Button
+                      type="button"
+                      onClick={() => onCompleteRefund(order)}
+                      disabled={actionId === `refund-${order.id}`}
+                      className="h-10 border border-gray-300 bg-white px-3 text-black gap-2"
+                    >
+                      {actionId === `refund-${order.id}` ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <RotateCcw size={16} />
+                      )}
+                      Возврат
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-gray-400">-</span>
+                  )}
                 </td>
               </tr>
             ))}

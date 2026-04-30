@@ -30,11 +30,11 @@ export function useOrganizerWorkspace(isOrganizer) {
   const [reissueUids, setReissueUids] = useState({})
   const [reissueFiles, setReissueFiles] = useState({})
 
-  const organizer = profile?.organizer
-  const currentUser = profile?.user
+  const organizer = profile
   const isManual = organizer?.verificationMode === 'MANUAL'
   const isBanned = Boolean(organizer?.banned)
   const canMutateManualWorkflow = isManual && !isBanned
+  const legacyUser = profile?.legacyUser || null
 
   const metrics = useMemo(() => buildOrganizerMetrics({
     dashboard,
@@ -64,7 +64,7 @@ export function useOrganizerWorkspace(isOrganizer) {
         organizerApi.listEvents(),
       ])
 
-      const manualActive = profileData?.organizer?.verificationMode === 'MANUAL' && !profileData?.organizer?.banned
+      const manualActive = profileData?.verificationMode === 'MANUAL' && !profileData?.banned
       const [validationData, reissueData] = manualActive
         ? await Promise.all([
           organizerApi.listPendingValidation(),
@@ -218,7 +218,6 @@ export function useOrganizerWorkspace(isOrganizer) {
     clearError,
     clearStatus,
     completeReissue,
-    currentUser,
     deleteEvent,
     editEvent,
     editingEventId,
@@ -228,6 +227,7 @@ export function useOrganizerWorkspace(isOrganizer) {
     events,
     isBanned,
     isManual,
+    legacyUser,
     listingAction,
     loadOrganizerData,
     loading,

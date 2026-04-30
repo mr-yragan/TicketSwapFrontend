@@ -1,6 +1,6 @@
 import { Ban, Loader2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { formatOrganizerMode } from '../utils'
+import { formatDateTime, formatMaskedSecret, formatOrganizerMode } from '../utils'
 
 export function OrganizersTable({ actionId, loading, organizers, onToggleBan }) {
   return (
@@ -19,14 +19,15 @@ export function OrganizersTable({ actionId, loading, organizers, onToggleBan }) 
               <th className="px-5 py-3">Организатор</th>
               <th className="px-5 py-3">Почта</th>
               <th className="px-5 py-3">Тип</th>
-              <th className="px-5 py-3">API-ключ</th>
+              <th className="px-5 py-3">Код</th>
+              <th className="px-5 py-3">Интеграция</th>
               <th className="px-5 py-3">Статус</th>
               <th className="px-5 py-3 text-right">Действие</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {loading && organizers.length === 0 && <TableMessage>Загрузка...</TableMessage>}
-            {!loading && organizers.length === 0 && <TableMessage>Организаторов пока нет</TableMessage>}
+            {loading && organizers.length === 0 && <TableMessage colSpan={7}>Загрузка...</TableMessage>}
+            {!loading && organizers.length === 0 && <TableMessage colSpan={7}>Организаторов пока нет</TableMessage>}
 
             {organizers.map((organizer) => (
               <tr key={organizer.id} className={organizer.banned ? 'bg-gray-50 text-gray-500' : ''}>
@@ -40,7 +41,21 @@ export function OrganizersTable({ actionId, loading, organizers, onToggleBan }) 
                     {formatOrganizerMode(organizer.verificationMode)}
                   </span>
                 </td>
-                <td className="px-5 py-4 font-mono text-xs">{organizer.apiKey || '-'}</td>
+                <td className="px-5 py-4 font-mono text-xs text-gray-700">{organizer.organizerCode || '-'}</td>
+                <td className="px-5 py-4">
+                  {organizer.verificationMode === 'EXTERNAL_API' ? (
+                    <div>
+                      <div className="font-mono text-xs text-gray-700">
+                        {formatMaskedSecret(organizer.apiKeyLast4)}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Выдан: {formatDateTime(organizer.apiKeyCreatedAt)}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Ручной режим</span>
+                  )}
+                </td>
                 <td className="px-5 py-4">
                   <OrganizerStatus banned={organizer.banned} />
                 </td>
@@ -60,10 +75,10 @@ export function OrganizersTable({ actionId, loading, organizers, onToggleBan }) 
   )
 }
 
-function TableMessage({ children }) {
+function TableMessage({ children, colSpan }) {
   return (
     <tr>
-      <td colSpan="6" className="px-5 py-10 text-center text-gray-500">{children}</td>
+      <td colSpan={colSpan} className="px-5 py-10 text-center text-gray-500">{children}</td>
     </tr>
   )
 }

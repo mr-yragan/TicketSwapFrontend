@@ -13,12 +13,17 @@ export function useAdminOrganizers(isAdmin) {
   const [loading, setLoading] = useState(false)
   const [actionId, setActionId] = useState(null)
   const [status, setStatus] = useState({ type: 'idle', message: '' })
+  const [issuedCredentials, setIssuedCredentials] = useState(null)
   const [form, setForm] = useState(EMPTY_ORGANIZER_FORM)
 
   const sortedOrganizers = useMemo(() => sortOrganizers(organizers), [organizers])
 
   const clearStatus = useCallback(() => {
     setStatus({ type: 'idle', message: '' })
+  }, [])
+
+  const clearIssuedCredentials = useCallback(() => {
+    setIssuedCredentials(null)
   }, [])
 
   const loadOrganizers = useCallback(async () => {
@@ -49,6 +54,7 @@ export function useAdminOrganizers(isAdmin) {
 
   const createOrganizer = useCallback(async () => {
     clearStatus()
+    clearIssuedCredentials()
 
     if (!isAdmin) {
       setStatus({ type: 'error', message: 'Нет доступа: требуется роль ADMIN.' })
@@ -66,17 +72,29 @@ export function useAdminOrganizers(isAdmin) {
     try {
       const created = await adminApi.createOrganizer(payload)
       setOrganizers((current) => [created, ...current])
+      setIssuedCredentials(
+        created?.verificationMode === 'EXTERNAL_API'
+          ? {
+              organizerName: created.name,
+              organizerCode: created.organizerCode,
+              integrationSecret: created.generatedIntegrationSecret || payload.integrationSecret || '',
+              generated: Boolean(created.generatedIntegrationSecret),
+            }
+          : null
+      )
       resetForm()
       setStatus({
         type: 'success',
-        message: 'Организатор создан, пользователь повышен до ORGANIZER. Ему нужно заново войти, чтобы токен получил новую роль.',
+        message: created?.verificationMode === 'EXTERNAL_API'
+          ? 'Организатор создан. Пользователь повышен до ORGANIZER, а параметры интеграции показаны ниже.'
+          : 'Организатор создан, пользователь повышен до ORGANIZER. Ему нужно заново войти, чтобы токен получил новую роль.',
       })
     } catch (error) {
       setStatus({ type: 'error', message: getAdminApiErrorMessage(error, 'Не удалось создать организатора') })
     } finally {
       setActionId(null)
     }
-  }, [clearStatus, form, isAdmin, resetForm])
+  }, [clearIssuedCredentials, clearStatus, form, isAdmin, resetForm])
 
   const toggleOrganizerBan = useCallback(async (organizer) => {
     const nextBanned = !organizer.banned
@@ -102,9 +120,11 @@ export function useAdminOrganizers(isAdmin) {
 
   return {
     actionId,
+    clearIssuedCredentials,
     clearStatus,
     createOrganizer,
     form,
+    issuedCredentials,
     loadOrganizers,
     loading,
     resetForm,

@@ -79,7 +79,7 @@ export const mapEventToForm = (eventItem) => ({
 })
 
 export const buildOrganizerMetrics = ({ dashboard, events, pendingValidation, pendingReissue }) => ([
-  { label: 'События', value: dashboard?.eventsCount ?? events.length },
+  { label: 'События', value: events.length },
   { label: 'На проверке', value: dashboard?.pendingValidationCount ?? pendingValidation.length },
   { label: 'Перевыпуск', value: dashboard?.pendingReissueCount ?? pendingReissue.length },
 ])

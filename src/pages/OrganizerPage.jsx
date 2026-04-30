@@ -33,7 +33,7 @@ export default function OrganizerPage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <OrganizerPageHeader
         loading={workspace.loading}
         organizerName={workspace.organizer?.name}
@@ -56,7 +56,7 @@ export default function OrganizerPage() {
           <OrganizerStatusMessage status={workspace.status} onDismiss={workspace.clearStatus} />
 
           <OrganizerProfileSummary
-            currentUser={workspace.currentUser}
+            currentUser={workspace.legacyUser || user}
             isBanned={workspace.isBanned}
             isManual={workspace.isManual}
             metrics={workspace.metrics}

@@ -9,13 +9,18 @@ const ORDER_STATUS_LABELS = {
   PROCESSING_REISSUE: 'Перевыпуск в работе',
   WAITING_MANUAL_REISSUE: 'Ждёт организатора',
   COMPLETED: 'Завершён',
+  FAILED: 'Ошибка',
   REFUND_REQUIRED: 'Нужен возврат',
+  REFUNDED: 'Возвращён',
 }
 
 const PAYMENT_STATUS_LABELS = {
+  NOT_STARTED: 'Не начат',
   AUTHORIZED: 'Авторизован',
   CAPTURED: 'Списан',
   REFUND_REQUIRED: 'Нужен возврат',
+  REFUNDED: 'Возвращён',
+  FAILED: 'Ошибка',
 }
 
 const formatDateTime = (value) => {
@@ -132,6 +137,9 @@ function OrderCard({ order, onOpen }) {
           <p className="mt-1 text-xs text-gray-500">Создан: {formatDateTime(order?.createdAt)}</p>
           {order?.completedAt && (
             <p className="mt-1 text-xs text-gray-500">Завершён: {formatDateTime(order.completedAt)}</p>
+          )}
+          {order?.refundedAt && (
+            <p className="mt-1 text-xs text-gray-500">Возврат: {formatDateTime(order.refundedAt)}</p>
           )}
         </div>
         <div className="text-right">

@@ -30,6 +30,28 @@
   to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
+@keyframes drawerIn {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 @keyframes scaleOut {
   from { transform: scale(1) translateY(0); opacity: 1; }
   to { transform: scale(0.98) translateY(-6px); opacity: 0; }
@@ -65,4 +87,3 @@
 [data-radix-dialog-content]:focus {
   outline: none;
 }
-

@@ -2,6 +2,17 @@ import { Ban, ClipboardCheck } from 'lucide-react'
 import { formatVerificationMode } from '../utils'
 
 export function OrganizerProfileSummary({ currentUser, isBanned, isManual, metrics, organizer }) {
+  const keyFootprint = organizer?.apiKeyLast4 ? `••••${organizer.apiKeyLast4}` : '-'
+  const keyIssuedAt = organizer?.apiKeyCreatedAt
+    ? new Date(organizer.apiKeyCreatedAt).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '-'
+
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
       <div className="rounded-lg border border-gray-200 bg-white p-5">
@@ -15,8 +26,11 @@ export function OrganizerProfileSummary({ currentUser, isBanned, isManual, metri
           <InfoLine label="Логин" value={currentUser?.login} />
           <InfoLine label="Роль" value={currentUser?.role} />
           <InfoLine label="Email подтвержден" value={currentUser?.emailVerified ? 'Да' : 'Нет'} />
+          <InfoLine label="Контакт организатора" value={organizer?.contactEmail} />
+          <InfoLine label="Код организатора" value={organizer?.organizerCode} mono />
           <InfoLine label="Тип проверки" value={formatVerificationMode(organizer?.verificationMode)} />
-          <InfoLine label="API-ключ" value={organizer?.apiKey || '-'} mono />
+          <InfoLine label="Секрет интеграции" value={keyFootprint} mono />
+          <InfoLine label="Секрет выдан" value={keyIssuedAt} />
         </div>
 
         {isBanned && (
@@ -28,7 +42,7 @@ export function OrganizerProfileSummary({ currentUser, isBanned, isManual, metri
 
         {!isManual && (
           <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-            External API организатор получает события из интеграции. Ручное создание и обработка очередей доступны только типу MANUAL.
+            External API организатор использует код <span className="font-mono">{organizer?.organizerCode || '-'}</span> и закрытый секрет интеграции. Ручное создание и обработка очередей доступны только типу MANUAL.
           </div>
         )}
       </div>

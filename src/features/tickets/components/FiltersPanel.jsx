@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui'
+
 const SORT_OPTIONS = [
   { value: 'date-asc', label: 'Ближайшие' },
   { value: 'date-desc', label: 'Поздние' },
@@ -7,13 +9,23 @@ const SORT_OPTIONS = [
 
 const INPUT_BASE_CLASSES = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black'
 
-export function FiltersPanel({ filters, onFilterChange, onReset, organizers = [], availableCities = [] }) {
+export function FiltersPanel({
+  filters,
+  onApply,
+  onFilterChange,
+  onReset,
+  organizers = [],
+  availableCities = [],
+  mode = 'sidebar',
+}) {
   const handleNumberChange = (field) => (event) => {
     const value = typeof event === 'string' ? event : event.target.value
     if (!value || Number(value) >= 0) {
       onFilterChange(field, value)
     }
   }
+
+  const isOverlay = mode === 'overlay'
 
   const normalizedSelectedCity = String(filters.city || '').trim()
   const cityValues = new Set(availableCities)
@@ -24,16 +36,18 @@ export function FiltersPanel({ filters, onFilterChange, onReset, organizers = []
   const cityOptions = Array.from(cityValues).sort((left, right) => left.localeCompare(right, 'ru'))
 
   return (
-    <aside className="w-full flex-shrink-0 lg:w-64">
-      <div className="bg-white rounded-2xl border border-gray-300 p-6 shadow-sm">
+    <aside className={isOverlay ? 'w-full' : 'w-full flex-shrink-0 lg:w-72'}>
+      <div className={`rounded-2xl border border-gray-300 bg-white p-4 shadow-sm sm:p-6 ${isOverlay ? '' : 'lg:sticky lg:top-4'}`}>
         <div className="mb-6 flex items-center justify-between gap-3">
           <h2 className="text-xl font-bold">Фильтры</h2>
-          <button
-            type="button"
-            onClick={onReset}
-            className="text-sm font-medium text-gray-500 hover:text-black">
-            Сбросить
-          </button>
+          {!isOverlay && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-sm font-medium text-gray-500 hover:text-black">
+              Сбросить
+            </button>
+          )}
         </div>
 
         <FilterSelect
@@ -67,10 +81,11 @@ export function FiltersPanel({ filters, onFilterChange, onReset, organizers = []
         />
 
         <FilterInput
-          label="ID события"
+          label="Код события"
           value={filters.eventId || ''}
           onChange={(value) => onFilterChange('eventId', value)}
-          placeholder="event-code"
+          placeholder="например, concert-2026"
+          hint="Это код события у организатора, а не номер билета."
         />
 
         <div className="mb-6 grid grid-cols-2 gap-3">
@@ -122,12 +137,31 @@ export function FiltersPanel({ filters, onFilterChange, onReset, organizers = []
             <option key={value} value={value}>{label}</option>
           ))}
         </FilterSelect>
+
+        {isOverlay && onApply && (
+          <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-gray-200 bg-white/95 px-4 pb-2 pt-4 backdrop-blur sm:-mx-6 sm:px-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                type="button"
+                onClick={onReset}
+                className="w-full rounded-xl border border-gray-300 bg-white text-black hover:bg-gray-50">
+              Сбросить
+              </Button>
+              <Button
+                type="button"
+                onClick={onApply}
+                className="w-full rounded-xl bg-black text-white hover:bg-gray-800">
+                Показать билеты
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )
 }
 
-function FilterInput({ compact = false, label, onChange, type = 'text', value, ...props }) {
+function FilterInput({ compact = false, hint = '', label, onChange, type = 'text', value, ...props }) {
   return (
     <label className={compact ? 'block' : 'mb-6 block'}>
       <span className="block text-sm font-medium text-gray-700 mb-2">{label}</span>
@@ -138,6 +172,7 @@ function FilterInput({ compact = false, label, onChange, type = 'text', value, .
         className={INPUT_BASE_CLASSES}
         {...props}
       />
+      {hint && <span className="mt-2 block text-xs text-gray-500">{hint}</span>}
     </label>
   )
 }

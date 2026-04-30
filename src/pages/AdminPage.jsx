@@ -1,9 +1,11 @@
 import { useAuth } from '@/context'
+import { AdminAuditLogTable } from '@/features/admin/components/AdminAuditLogTable'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminPurchaseOrdersTable } from '@/features/admin/components/AdminPurchaseOrdersTable'
 import { AdminStatusMessage } from '@/features/admin/components/AdminStatusMessage'
 import { OrganizerCreateForm } from '@/features/admin/components/OrganizerCreateForm'
 import { OrganizersTable } from '@/features/admin/components/OrganizersTable'
+import { useAdminAuditLog } from '@/features/admin/hooks/useAdminAuditLog'
 import { useAdminOrganizers } from '@/features/admin/hooks/useAdminOrganizers'
 import { useAdminPurchaseOrders } from '@/features/admin/hooks/useAdminPurchaseOrders'
 
@@ -13,6 +15,7 @@ export default function AdminPage() {
   const isAdmin = role === 'ADMIN'
   const adminState = useAdminOrganizers(isAdmin)
   const ordersState = useAdminPurchaseOrders(isAdmin)
+  const auditState = useAdminAuditLog(isAdmin)
 
   const handleToggleBan = (organizer) => {
     if (!organizer.banned && !window.confirm(`Заблокировать организатора "${organizer.name}"?`)) {
@@ -20,6 +23,14 @@ export default function AdminPage() {
     }
 
     adminState.toggleOrganizerBan(organizer)
+  }
+
+  const handleCompleteRefund = (order) => {
+    if (!window.confirm(`Подтвердить возврат по заказу #${order.id}?`)) {
+      return
+    }
+
+    ordersState.completeRefund(order)
   }
 
   if (!user) {
@@ -38,20 +49,24 @@ export default function AdminPage() {
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
       <AdminPageHeader
-        loading={adminState.loading || ordersState.loading}
+        loading={adminState.loading || ordersState.loading || auditState.loading}
         onRefresh={() => {
           adminState.loadOrganizers()
           ordersState.loadPurchaseOrders()
+          auditState.loadAuditLog()
         }}
       />
       <AdminStatusMessage status={adminState.status} onDismiss={adminState.clearStatus} />
+      <AdminStatusMessage status={ordersState.status} onDismiss={ordersState.clearStatus} />
 
       <div className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
           <OrganizerCreateForm
             actionId={adminState.actionId}
             form={adminState.form}
+            issuedCredentials={adminState.issuedCredentials}
             onChange={adminState.updateField}
+            onDismissCredentials={adminState.clearIssuedCredentials}
             onSubmit={adminState.createOrganizer}
           />
           <OrganizersTable
@@ -63,9 +78,17 @@ export default function AdminPage() {
         </div>
 
         <AdminPurchaseOrdersTable
+          actionId={ordersState.actionId}
           error={ordersState.error}
           loading={ordersState.loading}
+          onCompleteRefund={handleCompleteRefund}
           orders={ordersState.orders}
+        />
+
+        <AdminAuditLogTable
+          entries={auditState.entries}
+          error={auditState.error}
+          loading={auditState.loading}
         />
       </div>
     </main>
