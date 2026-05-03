@@ -5,7 +5,7 @@ export const getAdminApiErrorMessage = (error, fallback = 'Не удалось �
   const apiMessage = data?.message || data?.error || (typeof data === 'string' ? data : '')
 
   if (path === '/api/admin/purchase-orders' && status >= 500 && status < 600) {
-    return 'Журнал заказов недоступен: backend работает на старой версии или endpoint сейчас сломан.'
+    return 'Журнал заказов недоступен'
   }
   if (path === '/api/admin/audit-log' && status >= 500 && status < 600) {
     return 'Журнал аудита временно недоступен.'
@@ -21,7 +21,7 @@ export const getAdminApiErrorMessage = (error, fallback = 'Не удалось �
 
 export const formatOrganizerMode = (mode) => {
   if (mode === 'MANUAL') return 'Ручная'
-  if (mode === 'EXTERNAL_API') return 'External API'
+  if (mode === 'EXTERNAL_API') return 'Автоматическая'
   return mode || '-'
 }
 

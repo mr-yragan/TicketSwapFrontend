@@ -25,7 +25,7 @@ export function OrganizerEventForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <EventInput label="ID события" value={form.eventId} onChange={(value) => onChange('eventId', value)} disabled={!canMutate} required />
+        <EventInput label="Код события" value={form.eventId} onChange={(value) => onChange('eventId', value)} disabled={!canMutate} required />
         <EventInput label="Название" value={form.name} onChange={(value) => onChange('name', value)} disabled={!canMutate} required />
         <EventInput label="Дата и время" type="datetime-local" value={form.startsAt} onChange={(value) => onChange('startsAt', value)} disabled={!canMutate} required />
         <EventInput label="Площадка" value={form.venueName} onChange={(value) => onChange('venueName', value)} disabled={!canMutate} required />

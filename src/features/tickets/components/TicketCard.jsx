@@ -1,6 +1,6 @@
+import { ImageIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { formatPrice, formatDate, getTicketField } from '@/utils/ticketFormatters'
-import { TicketCardImagesCarousel } from '@/features/tickets/components/TicketCardImagesCarousel'
 
 export function TicketCard({ ticket }) {
   const navigate = useNavigate()
@@ -12,13 +12,18 @@ export function TicketCard({ ticket }) {
   const artist = getTicketField(ticket, 'eventName', 'artist') || 'Событие'
   const venue = getTicketField(ticket, 'venue', 'organizer') || 'Место уточняется'
   const date = getTicketField(ticket, 'eventDate', 'date') || ''
-  const ticketIdForImages = ticket?.id ?? ticket?.uid
 
   return (
     <div
       onClick={goToTicket}
       className="bg-white border-2 border-gray-300 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-xl hover:border-gray-400 flex flex-col h-full min-h-45">
-      <TicketCardImagesCarousel key={ticketIdForImages} ticketId={ticketIdForImages} />
+      <div className="relative mb-3 overflow-hidden rounded-2xl border-2 border-gray-300 bg-gray-100 aspect-video flex items-center justify-center">
+        <div className="text-center text-gray-500">
+          <ImageIcon size={28} className="mx-auto mb-2 text-gray-400" />
+          <p className="text-sm font-medium text-gray-600">Фото билета</p>
+          <p className="mt-1 text-xs text-gray-500">Доступно на странице объявления</p>
+        </div>
+      </div>
       <div className="flex items-start justify-between mb-2">
         <h3 className="font-semibold text-lg">{artist}</h3>
       </div>

@@ -41,7 +41,7 @@ export default function AdminPage() {
     return (
       <AdminAccessNotice
         tone="error"
-        message={`Нет доступа: текущая роль ${role || 'UNKNOWN'}. Если права ADMIN только что выдали через backend, выйдите и войдите снова.`}
+        message={`Нет доступа: текущая роль ${role || 'UNKNOWN'}. Если права Вам выдали, перезайдите в аккаунт.`}
       />
     )
   }
@@ -88,7 +88,11 @@ export default function AdminPage() {
         <AdminAuditLogTable
           entries={auditState.entries}
           error={auditState.error}
+          filters={auditState.filters}
           loading={auditState.loading}
+          onApplyFilters={auditState.applyFilters}
+          onFilterChange={auditState.updateFilter}
+          onResetFilters={auditState.resetFilters}
         />
       </div>
     </main>

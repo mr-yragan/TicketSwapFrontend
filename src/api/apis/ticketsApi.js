@@ -1,5 +1,19 @@
 import { deleteData, getData, postData, putData } from '../request'
 
+const appendTicketFiles = (formData, files) => {
+  if (!files || files.length === 0) {
+    return
+  }
+
+  for (const file of files) {
+    formData.append('ticketFiles', file)
+  }
+}
+
+const createIdempotencyKey = (listingId) => (
+  `buy-${listingId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+)
+
 export const ticketsApi = {
   async getAll(params) {
     return await getData('/tickets', params ? { params } : undefined)
@@ -13,8 +27,17 @@ export const ticketsApi = {
     return await getData(`/tickets/${id}/status-history`)
   },
 
-  async sell(ticketData) {
-    return await postData('/tickets/sell', ticketData)
+  async sell(ticketData, files) {
+    const formData = new FormData()
+    const ticketBlob = new Blob(
+      [JSON.stringify(ticketData)],
+      { type: 'application/json' }
+    )
+
+    formData.append('ticket', ticketBlob)
+    appendTicketFiles(formData, files)
+
+    return await postData('/tickets/sell', formData)
   },
 
   async update(id, ticketData) {
@@ -23,18 +46,6 @@ export const ticketsApi = {
 
   async remove(id) {
     await deleteData(`/tickets/${id}`)
-  },
-
-  async uploadFiles(ticketId, files) {
-    const formData = new FormData()
-
-    if (files && files.length > 0) {
-      for (const file of files) {
-        formData.append('ticketFiles', file)
-      }
-    }
-
-    return await postData(`/tickets/${ticketId}/files`, formData)
   },
 
   async getFiles(ticketId) {
@@ -49,15 +60,11 @@ export const ticketsApi = {
     return await getData(`/tickets/${ticketId}/reissued-file/download-url`)
   },
 
-  async createHold(id) {
-    return await postData(`/tickets/${id}/hold`)
-  },
-
-  async cancelHold(id) {
-    await deleteData(`/tickets/${id}/hold`)
-  },
-
   async buy(id) {
-    return await postData(`/tickets/${id}/buy`)
+    return await postData(`/tickets/${id}/buy`, null, {
+      headers: {
+        'Idempotency-Key': createIdempotencyKey(id),
+      },
+    })
   },
 }

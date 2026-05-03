@@ -15,16 +15,10 @@ export function useTicket(id) {
           setLoading(true)
           setError(null)
         }
-        const [view, history] = await Promise.all([
-          ticketsApi.getById(id),
-          ticketsApi.getStatusHistory(id).catch(() => []),
-        ])
+        const view = await ticketsApi.getById(id)
 
         if (!cancelled) {
-          setTicket({
-            ...view,
-            statusHistory: Array.isArray(history) ? history : [],
-          })
+          setTicket(view)
         }
       } catch (err) {
         if (!cancelled) {

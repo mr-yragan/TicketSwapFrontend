@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { ticketsApi } from '@/api'
+import Logger from '@/utils/logger'
 
 const initialFormState = {
   eventName: '',
@@ -10,6 +11,8 @@ const initialFormState = {
   additionalInfo: '',
   organizerId: '',
   organizerName: '',
+  organizerVerificationMode: '',
+  organizerHasExternalApi: false,
   selectedEventId: '',
   eventId: '',
   sellerComment: '',
@@ -17,12 +20,27 @@ const initialFormState = {
 
 const MAX_TEXT_LENGTH = 2000
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_FILES_COUNT = 5
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
 
 const getSubmitErrorMessage = (error) => {
   const data = error?.response?.data
   return data?.message || data?.error || (typeof data === 'string' ? data : '') || error.message || 'Не удалось отправить заявку'
 }
+
+const buildSellPayload = (form) => ({
+  uid: form.uid.trim() || `TICKET-${Date.now()}`,
+  eventName: form.eventName.trim(),
+  eventDate: form.eventDate,
+  venue: form.venue.trim(),
+  price: Number(form.price),
+  additionalInfo: form.additionalInfo.trim() || undefined,
+  organizerId: form.organizerId ? Number(form.organizerId) : undefined,
+  organizerName: form.organizerName.trim() || undefined,
+  selectedEventId: form.selectedEventId ? Number(form.selectedEventId) : undefined,
+  eventId: form.eventId.trim() || undefined,
+  sellerComment: form.sellerComment.trim() || undefined,
+})
 
 export function useSellForm(onSuccess) {
   const [form, setForm] = useState(initialFormState)
@@ -44,6 +62,10 @@ export function useSellForm(onSuccess) {
       return 'Загрузьте хотя бы один файл (PDF, PNG или JPG)'
     }
 
+    if (files.length > MAX_FILES_COUNT) {
+      return `Можно загрузить максимум ${MAX_FILES_COUNT} файлов`
+    }
+
     for (const file of files) {
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         return `Файл "${file.name}" имеет недопустимый тип. Допустимы: PDF, PNG, JPG`
@@ -59,6 +81,9 @@ export function useSellForm(onSuccess) {
 
   const validateForm = useCallback(() => {
     if (!form.organizerId) return 'Выберите зарегистрированного организатора'
+    if (form.organizerHasExternalApi && !form.selectedEventId && !form.eventId.trim()) {
+      return 'Для организатора с автоматической проверкой нужно выбрать событие из поиска'
+    }
     if (!form.eventName.trim()) return 'Введите название события или выберите его из поиска'
     if (!form.eventDate) return 'Выберите дату и время события'
 
@@ -103,27 +128,11 @@ export function useSellForm(onSuccess) {
     setError(null)
 
     try {
-      const ticketData = {
-        uid: form.uid.trim() || `TICKET-${Date.now()}`,
-        eventName: form.eventName.trim(),
-        eventDate: form.eventDate,
-        venue: form.venue.trim(),
-        price: Number(form.price),
-        additionalInfo: form.additionalInfo.trim() || undefined,
-        organizerId: form.organizerId ? Number(form.organizerId) : undefined,
-        organizerName: form.organizerName.trim() || undefined,
-        selectedEventId: form.selectedEventId ? Number(form.selectedEventId) : undefined,
-        eventId: form.eventId.trim() || undefined,
-        sellerComment: form.sellerComment.trim() || undefined,
-      }
+      const ticketData = buildSellPayload(form)
 
-      const createdTicket = await ticketsApi.sell(ticketData)
+      await ticketsApi.sell(ticketData, files)
 
-      if (files && files.length > 0) {
-        await ticketsApi.uploadFiles(createdTicket.id, files)
-      }
-
-      setSuccess('Заявка на продажу успешно отправлена')
+      setSuccess('Заявка на продажу отправлена. Она появится в каталоге после проверки билета.')
       triggerRefresh()
 
       if (typeof onSuccess === 'function') {
@@ -133,7 +142,7 @@ export function useSellForm(onSuccess) {
       setForm(initialFormState)
       setFiles([])
     } catch (err) {
-      console.error(err)
+      Logger.error('Ошибка отправки заявки на продажу', err)
       setError(getSubmitErrorMessage(err))
     } finally {
       setLoading(false)
@@ -151,6 +160,6 @@ export function useSellForm(onSuccess) {
     handleSubmit,
     setError,
     setSuccess,
-    constants: { MAX_TEXT_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES },
+    constants: { MAX_TEXT_LENGTH, MAX_FILE_SIZE, MAX_FILES_COUNT, ALLOWED_FILE_TYPES },
   }
 }

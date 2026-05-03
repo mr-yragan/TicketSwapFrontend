@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { normalizeDownloadUrl, normalizeTicketFiles } from '@/api/formatters'
 import { ticketsApi } from '@/api'
+import { useAuth } from '@/context'
 import Logger from '@/utils/logger'
 
 export function useTicketFiles(ticketId) {
+  const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -18,9 +20,9 @@ export function useTicketFiles(ticketId) {
   useEffect(() => {
     let cancelled = false
 
-    if (!ticketId) {
+    if (!ticketId || !isAuthenticated) {
       setFiles([])
-      setError(null)
+      setError(!isAuthenticated && ticketId ? 'noAccess' : null)
       setDownloadUrls({})
       downloadUrlsRef.current = {}
       setLoading(false)
@@ -35,12 +37,10 @@ export function useTicketFiles(ticketId) {
         }
 
         const response = await ticketsApi.getFiles(ticketId)
-        const imageFiles = normalizeTicketFiles(response).filter((file) =>
-          file.contentType?.startsWith('image/')
-        )
+        const ticketFiles = normalizeTicketFiles(response)
 
         if (!cancelled) {
-          setFiles(imageFiles)
+          setFiles(ticketFiles)
           setDownloadUrls({})
         }
         downloadUrlsRef.current = {}
@@ -50,7 +50,6 @@ export function useTicketFiles(ticketId) {
         }
 
         if (err.response?.status === 401 || err.response?.status === 403) {
-          Logger.warn(`Нет доступа к файлам билета ${ticketId}`)
           setError('noAccess')
         } else {
           Logger.error('Ошибка загрузки файлов:', err)
@@ -69,10 +68,10 @@ export function useTicketFiles(ticketId) {
     return () => {
       cancelled = true
     }
-  }, [ticketId])
+  }, [isAuthenticated, ticketId])
 
   const getDownloadUrl = useCallback(async (fileId) => {
-    if (!ticketId || !fileId) {
+    if (!isAuthenticated || !ticketId || !fileId) {
       return null
     }
 
@@ -101,7 +100,7 @@ export function useTicketFiles(ticketId) {
       Logger.error(`Ошибка получения ссылки для файла ${fileId}:`, err)
       return null
     }
-  }, [ticketId])
+  }, [isAuthenticated, ticketId])
 
   const preloadDownloadUrls = useCallback(async (fileIds) => {
     if (!Array.isArray(fileIds) || fileIds.length === 0) {

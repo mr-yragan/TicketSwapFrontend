@@ -33,7 +33,7 @@ export function TicketsRefreshProvider({ children }) {
 export function useTicketsRefresh() {
   const context = useContext(TicketsRefreshContext)
   if (!context) {
-    throw new Error('useTicketsRefresh must be used within TicketsRefreshProvider')
+    throw new Error('useTicketsRefresh должен быть внутри TicketsRefreshProvider')
   }
   return context
 }

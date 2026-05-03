@@ -1,130 +1,152 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { ArrowLeft, Calendar, MapPin, User, Info, Building2, MessageSquare, CheckCircle2, Download } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Download,
+  Info,
+  MapPin,
+  User,
+} from 'lucide-react'
 import { Button } from '@/components/ui'
-import { partnerApi, ticketsApi } from '@/api'
-import { useTicket } from '@/hooks/useTicket'
 import { TicketCarousel } from '@/components/TicketCarousel'
 import PurchaseButton from '@/components/PurchaseButton'
+import { ticketsApi } from '@/api'
+import { useAuth } from '@/context'
+import { useTicket } from '@/hooks/useTicket'
+import { useTicketStatusHistory } from '@/hooks/useTicketStatusHistory'
+import { useOrganizerCatalog } from '@/features/organizer/hooks/useOrganizerCatalog'
 import { getTicketStatusLabel } from '@/utils/ticketFormatters'
 
-const humanizeTicketText = (text) => {
-  const normalized = String(text || '').trim().toLowerCase()
-  if (!normalized) return ''
-
-  if (
-    normalized === 'unsupported organizer check'
-    || normalized.includes('not supported')
-    || normalized.includes('partner api')
-  ) {
-    return 'Этот билет пока не подтверждён организатором.'
+const getValidationBadgeLabel = ({ isVerified, partnerSupported }) => {
+  if (!isVerified) {
+    return ''
   }
 
-  if (
-    normalized === 'partner validation passed'
-    || normalized === 'validation completed successfully'
-  ) {
+  if (partnerSupported === false) {
+    return 'Проверен организатором'
+  }
+
+  if (partnerSupported === true) {
+    return 'Проверен автоматически'
+  }
+
+  return 'Билет подтверждён'
+}
+
+const getTicketStatusMessage = ({ isVerified, partnerSupported }) => {
+  if (isVerified) {
     return 'Билет подтверждён и доступен к покупке.'
   }
 
-  return text
+  if (partnerSupported === false) {
+    return 'Этот билет пока не подтверждён организатором. Статус обновится, как только проверка завершится.'
+  }
+
+  if (partnerSupported === true) {
+    return 'Проверка билета ещё идёт. Как только она завершится, объявление станет доступно для покупки.'
+  }
+
+  return 'Проверка билета ещё не завершена.'
+}
+
+const formatEventDate = (dateString) => {
+  if (!dateString) {
+    return 'Дата не указана'
+  }
+
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return dateString
+  }
+
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const formatMemberSince = (dateString) => {
+  if (!dateString) {
+    return 'Неизвестно'
+  }
+
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return dateString
+  }
+
+  return date.toLocaleDateString('ru-RU', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+const formatPrice = (price) => {
+  if (!price) {
+    return '—'
+  }
+
+  return `${price} ₽`
+}
+
+const formatDateTime = (value) => {
+  if (!value) {
+    return '—'
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { ticket, loading, error } = useTicket(id)
+  const { organizers } = useOrganizerCatalog()
   const details = ticket?.details ?? ticket
   const status = ticket?.status
-  const statusHistory = Array.isArray(ticket?.statusHistory) ? ticket.statusHistory : []
-  const latestHistoryEntry = statusHistory.length > 0 ? statusHistory[statusHistory.length - 1] : null
-  const [partnerSupported, setPartnerSupported] = useState(null)
+  const isAdmin = (user?.role || '').toUpperCase() === 'ADMIN'
   const [reissuedDownloadLoading, setReissuedDownloadLoading] = useState(false)
   const [reissuedDownloadError, setReissuedDownloadError] = useState('')
+  const { history: statusHistory, loading: historyLoading, error: historyError } = useTicketStatusHistory(details?.id, isAdmin)
+
+  const partnerSupported = useMemo(() => {
+    const organizerName = String(details?.organizerName || '').trim().toLowerCase()
+    if (!organizerName) {
+      return null
+    }
+
+    const organizer = organizers.find((item) => (
+      String(item?.name || '').trim().toLowerCase() === organizerName
+    ))
+
+    if (!organizer) {
+      return null
+    }
+
+    return Boolean(organizer.hasExternalApi)
+  }, [details?.organizerName, organizers])
+
   const isVerified = Boolean(details?.verified)
-  const partnerValidationReasons = new Set([
-    'Partner validation passed',
-    'Validation completed successfully'
-  ])
-  const manualValidationReasons = new Set([
-    'Организатор вручную подтвердил подлинность билета',
-  ])
-  const hasPartnerValidation = statusHistory.some((entry) => partnerValidationReasons.has(entry?.reason))
-  const hasManualValidation = statusHistory.some((entry) => manualValidationReasons.has(entry?.reason))
-  const ticketValidated = isVerified || hasPartnerValidation || hasManualValidation
-  const isSuccessfulValidation = ticketValidated
-  const validationBadgeLabel = hasManualValidation
-    ? 'Подтверждён организатором'
-    : ticketValidated
-      ? 'Подтверждён партнёром'
-      : ''
-  const statusReason = humanizeTicketText(
-    latestHistoryEntry?.reason || (isVerified ? 'Объявление прошло проверку и доступно к покупке.' : '')
-  )
-  const sellerComment = humanizeTicketText(details?.sellerComment || '')
-
-  useEffect(() => {
-    let cancelled = false
-
-    const checkOrganizer = async () => {
-      const organizerName = details?.organizerName
-      if (!organizerName || !organizerName.trim()) {
-        setPartnerSupported(null)
-        return
-      }
-
-      try {
-        const supported = await partnerApi.isOrganizerSupported(organizerName)
-        if (!cancelled) {
-          setPartnerSupported(supported)
-        }
-      } catch {
-        if (!cancelled) {
-          setPartnerSupported(null)
-        }
-      }
-    }
-
-    checkOrganizer()
-
-    return () => {
-      cancelled = true
-    }
-  }, [details?.organizerName])
-
-  const formatDate = (dateString) => {
-    if (!dateString) {
-      return 'Дата не указана'
-    }
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) {
-      return dateString
-    }
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatMemberSince = (dateString) => {
-    if (!dateString) {
-      return 'Неизвестно'
-    }
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return dateString
-    return date.toLocaleDateString('ru-RU', {
-      month: 'long',
-      year: 'numeric'
-    })
-  }
-
-  const formatPrice = (price) => {
-    if (!price) return '—'
-    return `${price} ₽`
-  }
+  const validationBadgeLabel = getValidationBadgeLabel({ isVerified, partnerSupported })
+  const statusMessage = getTicketStatusMessage({ isVerified, partnerSupported })
 
   const handleDownloadReissuedTicket = async () => {
     setReissuedDownloadError('')
@@ -149,9 +171,7 @@ export default function TicketDetailPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
-        <div className="text-center py-20 text-gray-500">
-          Загрузка билета...
-        </div>
+        <div className="py-20 text-center text-gray-500">Загрузка билета...</div>
       </div>
     )
   }
@@ -177,149 +197,169 @@ export default function TicketDetailPage() {
       </button>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Левая колонка - основная информация */}
         <div className="lg:col-span-2">
           <TicketCarousel key={details.id} ticketId={details.id} />
 
-          {/* Название события */}
           <h1 className="mb-4 text-2xl font-bold sm:text-3xl">{details.eventName || 'Событие'}</h1>
 
-          {/* Дата события */}
-          <div className="flex items-center gap-2 text-gray-600 mb-2">
+          <div className="mb-2 flex items-center gap-2 text-gray-600">
             <Calendar size={18} />
-            <span>{formatDate(details.eventDate)}</span>
+            <span>{formatEventDate(details.eventDate)}</span>
           </div>
 
           <div className="mb-2 text-sm text-gray-700">
             <span className="font-medium">Статус:</span> {getTicketStatusLabel(status)}
           </div>
 
-          {statusReason && (
-            <div
-              className={`mb-4 p-3 rounded-lg border text-sm ${
-                isSuccessfulValidation
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-700'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                {isSuccessfulValidation && (
-                  <CheckCircle2 size={16} className="mt-0.5 text-green-600 shrink-0" />
+          <div
+            className={`mb-4 rounded-lg border p-3 text-sm ${
+              isVerified
+                ? 'border-green-200 bg-green-50 text-green-700'
+                : 'border-gray-200 bg-gray-50 text-gray-700'
+            }`}
+          >
+            <div className="flex items-start gap-2">
+              {isVerified && (
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-green-600" />
+              )}
+              <div>
+                {isVerified && (
+                  <div className="mb-1 font-medium">Билет подтверждён</div>
                 )}
-                <div>
-                  {isSuccessfulValidation && (
-                    <div className="mb-1 font-medium">Билет подтверждён</div>
-                  )}
-                  {latestHistoryEntry?.reason ? (
-                    <>
-                      <span className="font-medium">{isSuccessfulValidation ? 'Статус:' : 'Комментарий:'}</span>{' '}
-                      {statusReason}
-                    </>
-                  ) : (
-                    statusReason
-                  )}
-                </div>
+                <span className="font-medium">{isVerified ? 'Статус:' : 'Проверка:'}</span>{' '}
+                {statusMessage}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Место проведения */}
-          <div className="flex items-center gap-2 text-gray-600 mb-6">
+          <div className="mb-6 flex items-center gap-2 text-gray-600">
             <MapPin size={18} />
             <span>{details.venue || 'Место не указано'}</span>
           </div>
 
-          {/* Детали билета */}
           <div className="mb-6 rounded-2xl border-2 border-gray-300 bg-white p-4 sm:p-6">
-            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-bold">Детали билета</h2>
-              {ticketValidated && (
-                <span className="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded-md">
-                  {validationBadgeLabel || 'Билет подтверждён'}
+              {isVerified && (
+                <span className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white">
+                  {validationBadgeLabel}
                 </span>
               )}
             </div>
+
             <div className="space-y-3">
               {details.additionalInfo && (
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <Info size={16} className="text-gray-500" />
                     <p className="text-sm text-gray-500">Дополнительная информация</p>
                   </div>
-                  <p className="font-medium pl-6">{details.additionalInfo}</p>
+                  <p className="pl-6 font-medium">{details.additionalInfo}</p>
                 </div>
               )}
 
               {details.organizerName && (
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <Building2 size={16} className="text-gray-500" />
                     <p className="text-sm text-gray-500">Организатор</p>
                   </div>
-                  <p className="font-medium pl-6">{details.organizerName}</p>
+                  <p className="pl-6 font-medium">{details.organizerName}</p>
                 </div>
               )}
 
               {!details.additionalInfo && !details.organizerName && (
-                <p className="text-gray-500 text-sm">Дополнительная информация отсутствует</p>
+                <p className="text-sm text-gray-500">Дополнительная информация отсутствует</p>
               )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            {/* Комментарий от продавца */}
-            {sellerComment && (
-              <div className="rounded-2xl border-2 border-gray-300 bg-white p-4 sm:p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare size={20} />
-                  <h2 className="text-xl font-bold">Комментарий к билету</h2>
+          {details.reissuedTicketUid && (
+            <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4 sm:p-6">
+              <h2 className="mb-2 text-lg font-bold text-green-900">Перевыпущенный билет</h2>
+              <p className="text-sm text-green-800">
+                Новый билет был перевыпущен и доступен покупателю.
+              </p>
+              <p className="mt-2 text-sm font-medium text-green-900">
+                UID: {details.reissuedTicketUid}
+              </p>
+              <Button
+                type="button"
+                onClick={handleDownloadReissuedTicket}
+                disabled={reissuedDownloadLoading}
+                className="mt-4 gap-2 bg-black text-white"
+              >
+                <Download size={18} />
+                {reissuedDownloadLoading ? 'Получаем ссылку...' : 'Скачать новый билет'}
+              </Button>
+              {reissuedDownloadError && (
+                <p className="mt-2 text-sm text-red-700">{reissuedDownloadError}</p>
+              )}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="rounded-2xl border-2 border-gray-300 bg-white p-4 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold">История статусов</h2>
+                  <p className="mt-1 text-sm text-gray-500">Этот блок виден только администратору.</p>
                 </div>
-                <p className="text-gray-700">{sellerComment}</p>
+                <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                  Записей: {statusHistory.length}
+                </span>
               </div>
-            )}
 
-            {details.reissuedTicketUid && (
-              <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4 sm:p-6">
-                <h2 className="text-lg font-bold text-green-900 mb-2">Перевыпущенный билет</h2>
-                <p className="text-sm text-green-800">
-                  Новый билет был перевыпущен и доступен покупателю.
-                </p>
-                <p className="mt-2 text-sm text-green-900 font-medium">
-                  UID: {details.reissuedTicketUid}
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleDownloadReissuedTicket}
-                  disabled={reissuedDownloadLoading}
-                  className="mt-4 bg-black text-white gap-2">
-                  <Download size={18} />
-                  {reissuedDownloadLoading ? 'Получаем ссылку...' : 'Скачать новый билет'}
-                </Button>
-                {reissuedDownloadError && (
-                  <p className="mt-2 text-sm text-red-700">{reissuedDownloadError}</p>
-                )}
-              </div>
-            )}
+              {historyLoading && (
+                <p className="text-sm text-gray-500">Загружаем историю статусов...</p>
+              )}
 
-            {details.organizerName && partnerSupported === false && !ticketValidated && (
-              <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 sm:p-6">
-                <h2 className="mb-2 text-lg font-bold text-amber-900">Статус билета</h2>
-                <p className="text-sm text-amber-800">
-                  Этот билет пока не подтверждён организатором. Статус обновится, как только проверка завершится.
-                </p>
-              </div>
-            )}
-          </div>
+              {!historyLoading && historyError && (
+                <p className="text-sm text-red-700">{historyError}</p>
+              )}
+
+              {!historyLoading && !historyError && statusHistory.length === 0 && (
+                <p className="text-sm text-gray-500">История изменений для этого объявления пока пуста.</p>
+              )}
+
+              {!historyLoading && !historyError && statusHistory.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
+                      <tr>
+                        <th className="px-3 py-2">Когда</th>
+                        <th className="px-3 py-2">Из статуса</th>
+                        <th className="px-3 py-2">В статус</th>
+                        <th className="px-3 py-2">Кто</th>
+                        <th className="px-3 py-2">Причина</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {statusHistory.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="px-3 py-3 text-xs text-gray-500">{formatDateTime(entry.changedAt)}</td>
+                          <td className="px-3 py-3 text-gray-700">{getTicketStatusLabel(entry.fromStatus) || '—'}</td>
+                          <td className="px-3 py-3 font-medium text-gray-950">{getTicketStatusLabel(entry.toStatus)}</td>
+                          <td className="px-3 py-3 text-gray-700">
+                            {entry.changedBy?.displayName || entry.changedBy?.email || 'system'}
+                          </td>
+                          <td className="px-3 py-3 text-gray-700">{entry.reason || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Правая колонка - цена и продавец */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Блок с ценой и кнопками */}
+        <div className="space-y-6 lg:col-span-1">
           <div className="rounded-2xl border-2 border-gray-300 bg-white p-4 sm:p-6">
-            <p className="text-sm text-gray-500 mb-2">Цена билета</p>
+            <p className="mb-2 text-sm text-gray-500">Цена билета</p>
             <p className="mb-6 text-3xl font-bold sm:text-4xl">{formatPrice(details.price)}</p>
 
-            <PurchaseButton 
+            <PurchaseButton
               listingId={details.id}
               price={details.price}
               status={status}
@@ -328,20 +368,19 @@ export default function TicketDetailPage() {
             />
           </div>
 
-          {/* Информация о продавце */}
           {details.seller && (
             <div className="rounded-2xl border-2 border-gray-300 bg-white p-4 sm:p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-lg font-bold">Продавец</h3>
-                {ticketValidated && (
-                  <span className="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded-md">
-                    {validationBadgeLabel || 'Билет подтверждён'}
+                {isVerified && (
+                  <span className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white">
+                    {validationBadgeLabel}
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
                   <User className="text-purple-600" size={24} />
                 </div>
                 <div>

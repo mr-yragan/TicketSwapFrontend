@@ -7,6 +7,7 @@ import { RegisterModal } from './components/RegisterModal'
 import { SellTicketModal } from './components/SellTicketModal'
 import { TwoFactorModal } from './components/TwoFactorModal'
 import { ForgotPasswordModal } from './components/ForgotPasswordModal'
+import { EditListingModal } from './components/EditListingModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import HomePage from './pages/HomePage'
 import TicketDetailPage from './pages/TicketDetailPage'
@@ -35,6 +36,7 @@ function AppContent() {
       {currentModal === 'login' && <LoginModal />}
       {currentModal === 'register' && <RegisterModal />}
       {currentModal === 'sell' && <SellTicketModal />}
+      {currentModal === 'editListing' && <EditListingModal />}
       {currentModal === 'twoFactor' && <TwoFactorModal />}
       {currentModal === 'forgotPassword' && <ForgotPasswordModal />}
     </div>

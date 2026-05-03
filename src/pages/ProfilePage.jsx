@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth, useModal } from '@/context'
-import { authApi, listingsApi, profileApi, purchaseApi, purchasesApi, twoFactorApi } from '@/api'
+import { authApi, listingsApi, profileApi, purchaseApi, purchasesApi, ticketsApi, twoFactorApi } from '@/api'
 import { formatErrorMessage } from '@/api/formatters'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ProfilePageHeader } from './profile/ProfilePageHeader'
@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState('upcoming-purchases')
   const [settingsSection, setSettingsSection] = useState('profile')
   const [holdActionId, setHoldActionId] = useState(null)
+  const [listingActionId, setListingActionId] = useState(null)
   const [verificationLoading, setVerificationLoading] = useState(false)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [twoFactorLoading, setTwoFactorLoading] = useState(false)
@@ -38,89 +39,88 @@ export default function ProfilePage() {
   // Используем emailVerified из user (AuthContext), не из локального состояния
   const emailVerified = user?.emailVerified ?? false
 
-  useEffect(() => {
-    if (!user) return
-
-    const loadTickets = async () => {
-      setLoading(true)
-      setError('')
-      setOrdersError('')
-      try {
-        const profile = await profileApi.getProfile()
-        const legacyProfileShape = Object.prototype.hasOwnProperty.call(profile ?? {}, 'phoneNumber')
-
-        setOrdersSupported(!legacyProfileShape)
-        // Обновляем только профиль-форму, но не переписываем emailVerified
-        setProfileForm({
-          login: profile?.login || '',
-        })
-
-        const twoFactorStatus = await twoFactorApi.getTwoFactorStatus()
-        if (twoFactorStatus?.unsupported) {
-          setTwoFactorSupported(false)
-        } else if (twoFactorStatus?.unavailable) {
-          setTwoFactorSupported(false)
-        } else if (typeof twoFactorStatus?.twoFactorEnabled === 'boolean') {
-          setTwoFactorEnabled(twoFactorStatus.twoFactorEnabled)
-          setTwoFactorSupported(true)
-        } else {
-          setTwoFactorSupported(false)
-        }
-
-        const [
-          activeListingsData,
-          archivedListingsData,
-          activePurchasesData,
-          archivedPurchasesData,
-          holdsData,
-        ] = await Promise.all([
-          listingsApi.getMyListings('active'),
-          listingsApi.getMyListings('archived'),
-          purchasesApi.getMyPurchases('active'),
-          purchasesApi.getMyPurchases('archived'),
-          purchasesApi.getMyHolds(),
-        ])
-
-        setActiveListings(Array.isArray(activeListingsData) ? activeListingsData : [])
-        setArchivedListings(Array.isArray(archivedListingsData) ? archivedListingsData : [])
-        setUpcomingPurchases(Array.isArray(activePurchasesData) ? activePurchasesData : [])
-        setPastPurchases(Array.isArray(archivedPurchasesData) ? archivedPurchasesData : [])
-        setActiveHolds(Array.isArray(holdsData) ? holdsData : [])
-
-        if (legacyProfileShape) {
-          setPurchaseOrders([])
-          return
-        }
-
-        try {
-          const ordersData = await purchasesApi.getMyOrders()
-          setPurchaseOrders(Array.isArray(ordersData) ? ordersData : [])
-        } catch (ordersFetchError) {
-          console.error('Ошибка загрузки журнала заказов:', ordersFetchError)
-
-          const status = ordersFetchError?.response?.status
-          if (status === 401 || status === 403) {
-            throw ordersFetchError
-          }
-
-          setPurchaseOrders([])
-          setOrdersError('Журнал заказов временно недоступен. Остальные разделы кабинета загружены.')
-        }
-      } catch (e) {
-        console.error('Ошибка загрузки билетов:', e)
-        const status = e?.response?.status
-        if (status === 401 || status === 403) {
-          setError('Сессия истекла. Войдите снова.')
-        } else {
-          setError(e?.response?.data?.message || e.message || 'Не удалось загрузить билеты')
-        }
-      } finally {
-        setLoading(false)
-      }
+  const loadProfileData = useCallback(async () => {
+    if (!user) {
+      return
     }
 
-    loadTickets()
+    setLoading(true)
+    setError('')
+    setOrdersError('')
+    try {
+      const profile = await profileApi.getProfile()
+      const legacyProfileShape = Object.prototype.hasOwnProperty.call(profile ?? {}, 'phoneNumber')
+
+      setOrdersSupported(!legacyProfileShape)
+      setProfileForm({
+        login: profile?.login || '',
+      })
+
+      const twoFactorStatus = await twoFactorApi.getTwoFactorStatus()
+      if (twoFactorStatus?.unsupported || twoFactorStatus?.unavailable) {
+        setTwoFactorSupported(false)
+      } else if (typeof twoFactorStatus?.twoFactorEnabled === 'boolean') {
+        setTwoFactorEnabled(twoFactorStatus.twoFactorEnabled)
+        setTwoFactorSupported(true)
+      } else {
+        setTwoFactorSupported(false)
+      }
+
+      const [
+        activeListingsData,
+        archivedListingsData,
+        activePurchasesData,
+        archivedPurchasesData,
+        holdsData,
+      ] = await Promise.all([
+        listingsApi.getMyListings('active'),
+        listingsApi.getMyListings('archived'),
+        purchasesApi.getMyPurchases('active'),
+        purchasesApi.getMyPurchases('archived'),
+        purchasesApi.getMyHolds(),
+      ])
+
+      setActiveListings(Array.isArray(activeListingsData) ? activeListingsData : [])
+      setArchivedListings(Array.isArray(archivedListingsData) ? archivedListingsData : [])
+      setUpcomingPurchases(Array.isArray(activePurchasesData) ? activePurchasesData : [])
+      setPastPurchases(Array.isArray(archivedPurchasesData) ? archivedPurchasesData : [])
+      setActiveHolds(Array.isArray(holdsData) ? holdsData : [])
+
+      if (legacyProfileShape) {
+        setPurchaseOrders([])
+        return
+      }
+
+      try {
+        const ordersData = await purchasesApi.getMyOrders()
+        setPurchaseOrders(Array.isArray(ordersData) ? ordersData : [])
+      } catch (ordersFetchError) {
+        console.error('Ошибка загрузки журнала заказов:', ordersFetchError)
+
+        const status = ordersFetchError?.response?.status
+        if (status === 401 || status === 403) {
+          throw ordersFetchError
+        }
+
+        setPurchaseOrders([])
+        setOrdersError('Журнал заказов временно недоступен. Остальные разделы кабинета загружены.')
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки билетов:', e)
+      const status = e?.response?.status
+      if (status === 401 || status === 403) {
+        setError('Сессия истекла. Войдите снова.')
+      } else {
+        setError(e?.response?.data?.message || e.message || 'Не удалось загрузить билеты')
+      }
+    } finally {
+      setLoading(false)
+    }
   }, [user])
+
+  useEffect(() => {
+    loadProfileData()
+  }, [loadProfileData])
 
   useEffect(() => {
     if (!ordersSupported && tab === 'orders') {
@@ -165,6 +165,47 @@ export default function ProfilePage() {
       setError(formatErrorMessage(releaseError, 'Не удалось снять резерв'))
     } finally {
       setHoldActionId(null)
+    }
+  }
+
+  const handleEditListing = (ticketId) => {
+    if (!ticketId) {
+      setError('Не удалось определить объявление для редактирования')
+      return
+    }
+
+    openModal('editListing', {
+      listingId: ticketId,
+      onUpdated: async () => {
+        await loadProfileData()
+        setSuccessMessage('Объявление обновлено')
+      },
+    })
+  }
+
+  const handleDeleteListing = async (ticket) => {
+    if (!ticket?.id) {
+      setError('Не удалось определить объявление для удаления')
+      return
+    }
+
+    if (!window.confirm(`Снять с продажи объявление «${ticket.eventName || 'Без названия'}»?`)) {
+      return
+    }
+
+    const actionId = `delete-${ticket.id}`
+    setListingActionId(actionId)
+    setError('')
+
+    try {
+      await ticketsApi.remove(ticket.id)
+      await loadProfileData()
+      setSuccessMessage('Объявление снято с продажи')
+    } catch (deleteError) {
+      console.error('Ошибка удаления объявления:', deleteError)
+      setError(formatErrorMessage(deleteError, 'Не удалось снять объявление с продажи'))
+    } finally {
+      setListingActionId(null)
     }
   }
 
@@ -271,6 +312,8 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto">
         <ProfilePageHeader
           userEmail={user?.email}
+          userId={user?.id}
+          userRole={user?.role}
           emailVerified={emailVerified}
           verificationLoading={verificationLoading}
           onResendVerification={handleResendVerification}
@@ -311,12 +354,15 @@ export default function ProfilePage() {
             purchaseOrdersError={ordersError}
             ordersSupported={ordersSupported}
             holdActionId={holdActionId}
+            listingActionId={listingActionId}
             profileForm={profileForm}
             setProfileForm={setProfileForm}
             onSaveProfile={handleSaveProfile}
             profileSaving={profileSaving}
             settingsSection={settingsSection}
             onSettingsSectionChange={setSettingsSection}
+            onEditListing={handleEditListing}
+            onDeleteListing={handleDeleteListing}
             onReleaseHold={handleReleaseHold}
             onToggleTwoFactor={handleToggleTwoFactor}
             twoFactorEnabled={twoFactorEnabled}

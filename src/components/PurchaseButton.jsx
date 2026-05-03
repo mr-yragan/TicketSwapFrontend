@@ -5,13 +5,30 @@ import { useModal } from '@/context'
 import { Button, DismissibleAlert } from '@/components/ui'
 import { usePurchaseLogic } from '@/hooks/usePurchaseLogic'
 
+const getDisabledStatusLabel = (status) => {
+  switch (status) {
+    case 'CREATED':
+    case 'PENDING_VALIDATION':
+      return 'Билет ещё проверяется'
+    case 'PROCESSING':
+      return 'Покупка уже обрабатывается'
+    case 'FAILED':
+      return 'Продажа недоступна'
+    default:
+      return ''
+  }
+}
+
 const PurchaseButton = ({ listingId, price, disabled, sellerId, sellerEmail, status }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { openModal } = useModal()
   const { clearError, loading, error, handlePurchase } = usePurchaseLogic()
 
+  const role = (user?.role || '').toUpperCase()
   const isSold = status === 'COMPLETED'
+  const isRestrictedBuyerRole = role === 'ADMIN' || role === 'ORGANIZER'
+  const disabledStatusLabel = getDisabledStatusLabel(status)
   const isOwnTicket = (user?.id != null && sellerId != null && user.id === sellerId)
     || (user?.email && sellerEmail && user.email === sellerEmail)
   const isButtonDisabled = disabled || loading
@@ -38,6 +55,34 @@ const PurchaseButton = ({ listingId, price, disabled, sellerId, sellerEmail, sta
           className="w-full cursor-not-allowed border border-gray-300 bg-gray-100 text-gray-500 disabled:opacity-100"
         >
           Билет уже продан
+        </Button>
+      </div>
+    )
+  }
+
+  if (isRestrictedBuyerRole) {
+    return (
+      <div className="mt-4">
+        <Button
+          type="button"
+          disabled
+          className="w-full cursor-not-allowed border border-gray-300 bg-gray-100 text-gray-500 disabled:opacity-100"
+        >
+          Покупка доступна только обычным пользователям
+        </Button>
+      </div>
+    )
+  }
+
+  if (disabledStatusLabel) {
+    return (
+      <div className="mt-4">
+        <Button
+          type="button"
+          disabled
+          className="w-full cursor-not-allowed border border-gray-300 bg-gray-100 text-gray-500 disabled:opacity-100"
+        >
+          {disabledStatusLabel}
         </Button>
       </div>
     )

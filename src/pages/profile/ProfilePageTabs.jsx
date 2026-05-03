@@ -64,27 +64,40 @@ function EmptyState({ children }) {
   )
 }
 
-function ProfileTicketCard({ ticket, label, statusLabel, onOpen }) {
+function ProfileTicketCard({ ticket, label, statusLabel, onOpen, actions = null }) {
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(ticket?.id)}
-      className="flex w-full items-start justify-between gap-4 rounded-xl bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-    >
-      <div>
-        <h3 className="text-lg font-semibold">{ticket?.eventName || 'Без названия'}</h3>
-        <p className="mt-2 text-sm text-gray-600">{formatDateTime(ticket?.eventDate)}</p>
-        <p className="mt-1 text-xs text-gray-500">Место: {ticket?.venue || '-'}</p>
-        <p className="mt-1 text-xs text-gray-500">ID: {ticket?.uid || ticket?.id}</p>
+    <div className="rounded-xl bg-white p-4 shadow-sm">
+      <button
+        type="button"
+        onClick={() => onOpen(ticket?.id)}
+        className="flex w-full items-start justify-between gap-4 text-left transition-all hover:-translate-y-0.5"
+      >
+        <div>
+          <h3 className="text-lg font-semibold">{ticket?.eventName || 'Без названия'}</h3>
+          <p className="mt-2 text-sm text-gray-600">{formatDateTime(ticket?.eventDate)}</p>
+          <p className="mt-1 text-xs text-gray-500">Место: {ticket?.venue || '-'}</p>
+          <p className="mt-1 text-xs text-gray-500">ID: {ticket?.uid || ticket?.id}</p>
+        </div>
+        <div className="text-right">
+          <span className="block text-xs text-gray-400">{label}</span>
+          <div className="text-lg font-medium">{formatMoney(ticket?.resalePrice || ticket?.price)}</div>
+          <span className="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+            {statusLabel}
+          </span>
+        </div>
+      </button>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={() => onOpen(ticket?.id)}
+          className="bg-black text-white"
+        >
+          Открыть билет
+        </Button>
+        {actions}
       </div>
-      <div className="text-right">
-        <span className="block text-xs text-gray-400">{label}</span>
-        <div className="text-lg font-medium">{formatMoney(ticket?.resalePrice || ticket?.price)}</div>
-        <span className="mt-2 inline-block rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-          {statusLabel}
-        </span>
-      </div>
-    </button>
+    </div>
   )
 }
 
@@ -189,12 +202,15 @@ export function ProfilePageTabs({
   purchaseOrdersError,
   ordersSupported,
   holdActionId,
+  listingActionId,
   profileForm,
   setProfileForm,
   onSaveProfile,
   profileSaving,
   settingsSection,
   onSettingsSectionChange,
+  onEditListing,
+  onDeleteListing,
   onReleaseHold,
   onToggleTwoFactor,
   twoFactorEnabled,
@@ -222,6 +238,25 @@ export function ProfilePageTabs({
                 label="Цена продажи"
                 statusLabel={ticket?.verified ? 'Проверен' : 'На модерации'}
                 onOpen={openTicket}
+                actions={
+                  <>
+                    <Button
+                      type="button"
+                      onClick={() => onEditListing(ticket.id)}
+                      className="border border-gray-300 bg-white text-black"
+                    >
+                      Редактировать
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => onDeleteListing(ticket)}
+                      disabled={listingActionId === `delete-${ticket.id}`}
+                      className="border border-red-200 bg-white text-red-700 hover:bg-red-50"
+                    >
+                      {listingActionId === `delete-${ticket.id}` ? 'Снимаем...' : 'Снять с продажи'}
+                    </Button>
+                  </>
+                }
               />
             ))}
           </div>

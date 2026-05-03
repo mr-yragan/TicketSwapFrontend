@@ -1,10 +1,15 @@
 import { useModal } from '@/context'
+import { useAuth } from '@/context'
 import { Modal } from '@/components/ui'
+import { DismissibleAlert } from '@/components/ui'
 import { X } from 'lucide-react'
 import SellTicketForm from '@/components/SellTicketForm'
 
 export function SellTicketModal() {
   const { closeModal } = useModal()
+  const { user } = useAuth()
+  const role = (user?.role || '').toUpperCase()
+  const canSellTickets = role !== 'ADMIN' && role !== 'ORGANIZER'
 
   return (
     <Modal onClose={closeModal}>
@@ -15,7 +20,13 @@ export function SellTicketModal() {
       </button>
 
       <h2 className="text-xl font-semibold mb-4">Создать объявление о продаже</h2>
-      <SellTicketForm />
+      {canSellTickets ? (
+        <SellTicketForm />
+      ) : (
+        <DismissibleAlert tone="info" onDismiss={closeModal}>
+          Администратор и организатор не могут размещать билеты на продажу через обычный пользовательский сценарий.
+        </DismissibleAlert>
+      )}
     </Modal>
   )
 }

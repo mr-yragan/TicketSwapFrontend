@@ -5,6 +5,7 @@ export function FormInput({
   onChange,
   placeholder,
   required = false,
+  disabled = false,
   inputMode,
   maxLength,
   rows
@@ -16,6 +17,7 @@ export function FormInput({
     onChange,
     placeholder,
     required,
+    disabled,
     maxLength,
     className: 'border rounded px-3 py-2 text-sm w-full'
   }

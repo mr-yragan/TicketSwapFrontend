@@ -1,16 +1,29 @@
-/**
- * Hook с логикой покупки билета
- */
 import { useState, useCallback } from 'react'
 import { ticketsApi } from '@/api'
+import { useAuth } from '@/context'
+
+const getPurchaseMessage = (response) => {
+  if (response?.reissuedTicketUid) {
+    return `Билет успешно куплен. Новый билет перевыпущен: ${response.reissuedTicketUid}`
+  }
+
+  return 'Покупка оформлена. Если организатор перевыпускает билеты вручную, новый билет появится в личном кабинете после обработки.'
+}
 
 export function usePurchaseLogic() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const { user } = useAuth()
+  const role = (user?.role || '').toUpperCase()
 
   const handlePurchase = useCallback(async (listingId, navigate) => {
     if (loading) {
       return
+    }
+
+    if (role === 'ADMIN' || role === 'ORGANIZER') {
+      setError('Админы и организаторы не могут покупать билеты. Войдите в аккаунт обычного пользователя.')
+      return null
     }
 
     setLoading(true)
@@ -22,9 +35,7 @@ export function usePurchaseLogic() {
 
       navigate('/profile', {
         state: {
-          message: reissuedTicketUid
-            ? `Билет успешно приобретён! Новый билет перевыпущен: ${reissuedTicketUid}`
-            : 'Билет успешно приобретён!',
+          message: getPurchaseMessage(response),
           tab: 'upcoming-purchases',
           refreshPurchases: true,
           reissuedTicketUid,
@@ -39,7 +50,7 @@ export function usePurchaseLogic() {
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [loading, role])
 
   const clearError = useCallback(() => {
     setError(null)

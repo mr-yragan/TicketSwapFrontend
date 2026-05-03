@@ -3,7 +3,9 @@ import { Button } from '@/components/ui'
 import { Settings2, Shield, UserRound } from 'lucide-react'
 
 export function ProfilePageHeader({
+  userId,
   userEmail,
+  userRole,
   emailVerified,
   verificationLoading,
   onResendVerification,
@@ -49,6 +51,10 @@ export function ProfilePageHeader({
         <div>
           <h1 className="text-2xl font-bold">Личный кабинет</h1>
           <p className="text-sm text-gray-500">Пользователь: {userEmail || 'гость'}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <span className="rounded-full bg-gray-100 px-2.5 py-1">ID: {userId ?? '—'}</span>
+            <span className="rounded-full bg-gray-100 px-2.5 py-1">Роль: {userRole || '—'}</span>
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-700">Подтверждение email:</span>
             <span className={emailVerified ? 'text-sm font-medium text-green-700' : 'text-sm font-medium text-orange-700'}>

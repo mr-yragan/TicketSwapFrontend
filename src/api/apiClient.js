@@ -10,6 +10,10 @@ const apiClient = axios.create({
   timeout: API_CONFIG.TIMEOUT,
 })
 
+const isTicketFileAccessRequest = (url = '') => (
+  /\/tickets\/[^/]+\/(file|files|reissued-file)(\/.*)?$/.test(url)
+)
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -34,6 +38,15 @@ apiClient.interceptors.response.use(
     return response
   },
   (error) => {
+    const requestUrl = error.config?.url || ''
+    const isExpectedTicketFileAccessError = (
+      (error.response?.status === 401 || error.response?.status === 403)
+      && isTicketFileAccessRequest(requestUrl)
+    )
+
+    if (isExpectedTicketFileAccessError) {
+      return Promise.reject(error)
+    }
 
     if (error.response?.status === 401) {
       Logger.warn('Unauthorized response received')

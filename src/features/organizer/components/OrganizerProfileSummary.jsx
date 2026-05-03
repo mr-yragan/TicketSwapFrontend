@@ -42,7 +42,7 @@ export function OrganizerProfileSummary({ currentUser, isBanned, isManual, metri
 
         {!isManual && (
           <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-            External API организатор использует код <span className="font-mono">{organizer?.organizerCode || '-'}</span> и закрытый секрет интеграции. Ручное создание и обработка очередей доступны только типу MANUAL.
+            Для этого организатора включена автоматическая проверка. События и перевыпуск билетов обрабатываются через подключённую интеграцию, поэтому ручные очереди здесь недоступны.
           </div>
         )}
       </div>

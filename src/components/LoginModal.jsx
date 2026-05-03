@@ -6,6 +6,16 @@ import { useLoginForm } from '@/hooks/useLoginForm'
 import { authApi } from '@/api'
 import { useState } from 'react'
 
+const isUnverifiedEmailError = (message) => {
+  if (typeof message !== 'string') {
+    return false
+  }
+
+  const normalizedMessage = message.toLowerCase()
+  return normalizedMessage.includes('почта не подтверждена')
+    || normalizedMessage.includes('email is not verified')
+}
+
 export function LoginModal() {
   const { closeModal, modalData, openModalAfterClose } = useModal()
   const { login } = useAuth()
@@ -55,6 +65,8 @@ export function LoginModal() {
       setResendMessage(result.error || 'Не удалось отправить письмо подтверждения')
     }
   }
+
+  const canResendVerification = form.identifier.includes('@') && isUnverifiedEmailError(error)
 
   return (
     <Modal onClose={closeModal}>
@@ -123,7 +135,7 @@ export function LoginModal() {
         </button>
       </div>
 
-      {error?.includes('Email is not verified') && form.identifier.includes('@') && (
+      {canResendVerification && (
         <div className="text-center text-sm mt-3">
           <button
             type="button"

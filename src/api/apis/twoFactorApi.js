@@ -10,11 +10,9 @@ export const twoFactorApi = {
       return await getData('/me/2fa')
     } catch (error) {
       const status = error?.response?.status
-      // 404 = не поддерживается (не ошибка)
       if (status === 404) {
         return { unsupported: true }
       }
-      // 5xx = временно недоступно (не блокируем профиль)
       if (status >= 500 && status < 600) {
         return { unavailable: true }
       }

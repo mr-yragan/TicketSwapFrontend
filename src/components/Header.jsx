@@ -3,17 +3,22 @@ import { useModal } from '@/context'
 import { useAuth } from '@/context'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { Building2, LayoutDashboard, LogIn, LogOut, Menu, PlusCircle, Settings2, Shield, UserPlus, UserRound, X } from 'lucide-react'
 
-const OUTLINE_BUTTON_CLASS = 'bg-white text-black border border-gray-300 px-6 gap-2'
+const SECONDARY_BUTTON_CLASS = 'border border-gray-300 bg-white px-6 text-black gap-2'
 
 export function Header() {
   const { openModal } = useModal()
   const { isAuthenticated, user, logout } = useAuth()
   const navigate = useNavigate()
+  const role = (user?.role || '').toUpperCase()
+  const canSellTickets = isAuthenticated && role !== 'ADMIN' && role !== 'ORGANIZER'
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const settingsRef = useRef(null)
+
+  useBodyScrollLock(mobileMenuOpen)
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -38,42 +43,72 @@ export function Header() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!mobileMenuOpen) return undefined
+  const closeHeaderMenus = () => {
+    setSettingsOpen(false)
+    setMobileMenuOpen(false)
+  }
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [mobileMenuOpen])
+  const navigateFromHeader = (path, options) => {
+    closeHeaderMenus()
+    navigate(path, options)
+  }
 
   const handleProfileClick = () => {
-    setSettingsOpen(false)
-    setMobileMenuOpen(false)
-    navigate('/profile')
+    navigateFromHeader('/profile')
   }
   const handleOrganizerClick = () => {
-    setSettingsOpen(false)
-    setMobileMenuOpen(false)
-    navigate('/organizer')
+    navigateFromHeader('/organizer')
   }
   const handleAdminClick = () => {
-    setSettingsOpen(false)
-    setMobileMenuOpen(false)
-    navigate('/admin')
+    navigateFromHeader('/admin')
   }
   const handleLogoClick = () => {
-    setSettingsOpen(false)
-    setMobileMenuOpen(false)
-    navigate('/')
+    navigateFromHeader('/')
   }
   const handleOpenSettings = () => {
+    navigateFromHeader('/profile', { state: { tab: 'settings' } })
+  }
+
+  const toggleMobileMenu = () => {
     setSettingsOpen(false)
+    setMobileMenuOpen((prev) => !prev)
+  }
+
+  const handleSellClick = () => {
+    closeHeaderMenus()
+    openModal('sell')
+  }
+
+  const handleOpenLogin = () => {
+    closeHeaderMenus()
+    openModal('login')
+  }
+
+  const handleOpenRegister = () => {
+    closeHeaderMenus()
+    openModal('register')
+  }
+
+  const handleLogout = () => {
+    closeHeaderMenus()
+    logout()
+  }
+
+  const handleCloseMobileMenu = () => {
     setMobileMenuOpen(false)
-    navigate('/profile',
-      { state: { tab: 'settings' } })
+  }
+
+  const handleCloseSettings = () => {
+    setSettingsOpen(false)
+  }
+
+  const handleToggleSettings = () => {
+    setSettingsOpen((prev) => !prev)
+  }
+
+  const handleProfileMenuClick = () => {
+    handleCloseSettings()
+    navigate('/profile')
   }
 
   return (
@@ -90,15 +125,15 @@ export function Header() {
             type="button"
             aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-gray-300 bg-white text-black shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}>
+            onClick={toggleMobileMenu}>
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {isAuthenticated && (
+        {canSellTickets && (
           <div className="mt-4 lg:hidden">
             <Button
-              onClick={() => openModal('sell')}
+              onClick={handleSellClick}
               className="w-full justify-center gap-2 bg-black px-4 text-white">
               <PlusCircle size={18} />
               Продать билет
@@ -107,9 +142,9 @@ export function Header() {
         )}
 
         <nav className="mt-4 hidden flex-wrap items-center gap-2 sm:gap-3 lg:mt-0 lg:flex">
-          {isAuthenticated && (
+          {canSellTickets && (
             <Button
-              onClick={() => openModal('sell')}
+              onClick={handleSellClick}
               className="gap-2 bg-black px-4 text-white sm:px-6">
               <PlusCircle size={18} />
               Продать билет
@@ -119,17 +154,18 @@ export function Header() {
           {isAuthenticated ? (
             <AuthenticatedNav
               user={user}
-              logout={logout}
+              logout={handleLogout}
               onProfileClick={handleProfileClick}
               onOrganizerClick={handleOrganizerClick}
               onAdminClick={handleAdminClick}
               settingsOpen={settingsOpen}
-              setSettingsOpen={setSettingsOpen}
+              onToggleSettings={handleToggleSettings}
               settingsRef={settingsRef}
               onOpenSettings={handleOpenSettings}
+              onProfileMenuClick={handleProfileMenuClick}
             />
           ) : (
-            <GuestNav openModal={openModal} />
+            <GuestNav onOpenLogin={handleOpenLogin} onOpenRegister={handleOpenRegister} />
           )}
         </nav>
       </div>
@@ -137,13 +173,14 @@ export function Header() {
       {mobileMenuOpen && (
         <MobileMenu
           isAuthenticated={isAuthenticated}
-          openModal={openModal}
+          onOpenLogin={handleOpenLogin}
+          onOpenRegister={handleOpenRegister}
           onAdminClick={handleAdminClick}
-          onClose={() => setMobileMenuOpen(false)}
+          onClose={handleCloseMobileMenu}
           onOpenSettings={handleOpenSettings}
           onOrganizerClick={handleOrganizerClick}
           onProfileClick={handleProfileClick}
-          logout={logout}
+          logout={handleLogout}
           user={user}
         />
       )}
@@ -151,7 +188,18 @@ export function Header() {
   )
 }
 
-function AuthenticatedNav({ user, logout, onProfileClick, onOrganizerClick, onAdminClick, settingsOpen, setSettingsOpen, settingsRef, onOpenSettings }) {
+function AuthenticatedNav({
+  user,
+  logout,
+  onProfileClick,
+  onOrganizerClick,
+  onAdminClick,
+  onToggleSettings,
+  settingsOpen,
+  settingsRef,
+  onOpenSettings,
+  onProfileMenuClick,
+}) {
   const role = (user?.role || '').toUpperCase()
 
   return (
@@ -161,7 +209,7 @@ function AuthenticatedNav({ user, logout, onProfileClick, onOrganizerClick, onAd
           type="button"
           aria-label="Открыть меню настроек"
           className="h-11 w-11 bg-white px-0 text-black border border-gray-300"
-          onClick={() => setSettingsOpen((prev) => !prev)}>
+          onClick={onToggleSettings}>
           <Settings2 size={18} />
         </Button>
 
@@ -169,10 +217,7 @@ function AuthenticatedNav({ user, logout, onProfileClick, onOrganizerClick, onAd
           <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
             <button
               type="button"
-              onClick={() => {
-                setSettingsOpen(false)
-                onProfileClick()
-              }}
+              onClick={onProfileMenuClick}
               className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors">
               <UserRound size={18} className="mt-0.5 shrink-0 text-gray-500" />
               <div>
@@ -226,18 +271,18 @@ function AuthenticatedNav({ user, logout, onProfileClick, onOrganizerClick, onAd
   )
 }
 
-function GuestNav({ openModal }) {
+function GuestNav({ onOpenLogin, onOpenRegister }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
-        onClick={() => openModal('login')}
-        className={OUTLINE_BUTTON_CLASS}>
+        onClick={onOpenLogin}
+        className={SECONDARY_BUTTON_CLASS}>
         <LogIn size={18} />
         Вход
       </Button>
       <Button
-        onClick={() => openModal('register')}
-        className={OUTLINE_BUTTON_CLASS}>
+        onClick={onOpenRegister}
+        className={SECONDARY_BUTTON_CLASS}>
         <UserPlus size={18} />
         Регистрация
       </Button>
@@ -245,7 +290,18 @@ function GuestNav({ openModal }) {
   )
 }
 
-function MobileMenu({ isAuthenticated, logout, onAdminClick, onClose, onOpenSettings, onOrganizerClick, onProfileClick, openModal, user }) {
+function MobileMenu({
+  isAuthenticated,
+  logout,
+  onAdminClick,
+  onClose,
+  onOpenLogin,
+  onOpenRegister,
+  onOpenSettings,
+  onOrganizerClick,
+  onProfileClick,
+  user,
+}) {
   const role = (user?.role || '').toUpperCase()
 
   const handleAction = (action) => {
@@ -326,14 +382,14 @@ function MobileMenu({ isAuthenticated, logout, onAdminClick, onClose, onOpenSett
           ) : (
             <div className="space-y-3">
               <Button
-                onClick={() => handleAction(() => openModal('login'))}
-                className={`w-full justify-center ${OUTLINE_BUTTON_CLASS}`}>
+                onClick={() => handleAction(onOpenLogin)}
+                className={`w-full justify-center ${SECONDARY_BUTTON_CLASS}`}>
                 <LogIn size={18} />
                 Вход
               </Button>
               <Button
-                onClick={() => handleAction(() => openModal('register'))}
-                className={`w-full justify-center ${OUTLINE_BUTTON_CLASS}`}>
+                onClick={() => handleAction(onOpenRegister)}
+                className={`w-full justify-center ${SECONDARY_BUTTON_CLASS}`}>
                 <UserPlus size={18} />
                 Регистрация
               </Button>

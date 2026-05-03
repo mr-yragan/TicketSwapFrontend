@@ -1,6 +1,14 @@
 import { formatAuditAction, formatDateTime } from '../utils'
 
-export function AdminAuditLogTable({ entries, error, loading }) {
+export function AdminAuditLogTable({
+  entries,
+  error,
+  filters,
+  loading,
+  onApplyFilters,
+  onFilterChange,
+  onResetFilters,
+}) {
   return (
     <section className="min-w-0 rounded-lg border border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
@@ -9,6 +17,56 @@ export function AdminAuditLogTable({ entries, error, loading }) {
           <p className="text-sm text-gray-500">Последние 200 админских действий</p>
         </div>
         <p className="text-sm text-gray-500">Всего: {entries.length}</p>
+      </div>
+
+      <div className="border-b border-gray-200 px-5 py-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <FilterField
+            label="Действие"
+            value={filters.action}
+            onChange={(value) => onFilterChange('action', value)}
+            placeholder="Например, ORGANIZER_CREATED"
+          />
+          <FilterField
+            label="Сущность"
+            value={filters.entityType}
+            onChange={(value) => onFilterChange('entityType', value)}
+            placeholder="Например, ORGANIZER"
+          />
+          <FilterField
+            label="ID сущности"
+            type="number"
+            value={filters.entityId}
+            onChange={(value) => onFilterChange('entityId', value)}
+            placeholder="Например, 42"
+          />
+          <FilterField
+            label="ID пользователя"
+            type="number"
+            value={filters.actorUserId}
+            onChange={(value) => onFilterChange('actorUserId', value)}
+            placeholder="Например, 7"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onApplyFilters}
+            disabled={loading}
+            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? 'Загружаем...' : 'Применить фильтры'}
+          </button>
+          <button
+            type="button"
+            onClick={onResetFilters}
+            disabled={loading}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Сбросить
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -43,6 +101,21 @@ export function AdminAuditLogTable({ entries, error, loading }) {
         </table>
       </div>
     </section>
+  )
+}
+
+function FilterField({ label, onChange, type = 'text', value, placeholder }) {
+  return (
+    <label className="grid gap-1.5 text-sm text-gray-700">
+      <span className="font-medium">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-black"
+      />
+    </label>
   )
 }
 

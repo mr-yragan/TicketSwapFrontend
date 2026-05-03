@@ -54,7 +54,7 @@ export const formatMoney = (value) => {
 
 export const formatVerificationMode = (mode) => {
   if (mode === 'MANUAL') return 'Ручная проверка'
-  if (mode === 'EXTERNAL_API') return 'Внешний API'
+  if (mode === 'EXTERNAL_API') return 'Автоматическая проверка'
   return mode || '-'
 }
 
