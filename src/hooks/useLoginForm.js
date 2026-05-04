@@ -5,8 +5,12 @@ const initialFormState = {
   password: '',
 }
 
-export function useLoginForm(onSuccess) {
-  const [form, setForm] = useState(initialFormState)
+export function useLoginForm(onSuccess, initialForm = initialFormState) {
+  const [form, setForm] = useState(() => ({
+    ...initialFormState,
+    ...initialForm,
+    password: '',
+  }))
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

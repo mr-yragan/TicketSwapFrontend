@@ -26,6 +26,18 @@ export const normalizeTicketFiles = (payload) => {
   return []
 }
 
+export const normalizeTicketFilePreviews = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.previews)) {
+    return payload.previews
+  }
+
+  return []
+}
+
 export const normalizeDownloadUrl = (payload) => {
   if (typeof payload === 'string') {
     return payload

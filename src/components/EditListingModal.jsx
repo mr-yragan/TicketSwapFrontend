@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, DismissibleAlert, Modal } from '@/components/ui'
 import { FormInput } from '@/components/FormInput'
+import { OrganizerSelect } from '@/components/OrganizerSelect'
 import { useModal } from '@/context'
 import { ticketsApi } from '@/api'
 import { organizerApi } from '@/api/apis/organizerApi'
@@ -33,10 +34,10 @@ const toDateTimeInput = (value) => {
   return localDate.toISOString().slice(0, 16)
 }
 
-const formatMode = (mode) => {
-  if (mode === 'MANUAL') return 'ручная проверка'
-  if (mode === 'EXTERNAL_API') return 'автоматическая проверка'
-  return 'тип не указан'
+const getOrganizerHint = (organizer) => {
+  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) return 'Проверка у партнёра'
+  if (organizer?.verificationMode === 'MANUAL') return 'Проверка у организатора'
+  return 'Тип проверки не указан'
 }
 
 const buildUpdatePayload = (form) => ({
@@ -307,24 +308,18 @@ export function EditListingModal() {
           </p>
 
           <label className="text-sm font-medium text-gray-700">Организатор *</label>
-          <select
+          <OrganizerSelect
             value={form.organizerId}
-            onChange={(event) => handleOrganizerChange(event.target.value)}
-            disabled={organizersLoading || saving}
-            className="w-full rounded border px-3 py-2 text-sm"
-            required
-          >
-            <option value="">{organizersLoading ? 'Загрузка...' : 'Выберите организатора'}</option>
-            {organizers.map((organizer) => (
-              <option key={organizer.id} value={organizer.id}>
-                {organizer.name} · {formatMode(organizer.verificationMode)}
-              </option>
-            ))}
-          </select>
+            onChange={handleOrganizerChange}
+            organizers={organizers}
+            loading={organizersLoading}
+            disabled={saving}
+          />
+          <input type="hidden" value={form.organizerId} required readOnly />
 
           {selectedOrganizer && (
             <div className="text-xs text-gray-500">
-              Выбран организатор: {selectedOrganizer.name}, {formatMode(selectedOrganizer.verificationMode)}.
+              Выбран организатор: {selectedOrganizer.name}. {getOrganizerHint(selectedOrganizer)}.
             </div>
           )}
 

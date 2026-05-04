@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   closeModal: vi.fn(),
   login: vi.fn(),
   openModalAfterClose: vi.fn(),
+  rememberModalState: vi.fn(),
+  clearRememberedModalState: vi.fn(),
   resendVerification: vi.fn(),
   setError: vi.fn(),
   useLoginForm: vi.fn(),
@@ -20,6 +22,8 @@ vi.mock('@/context', () => ({
     closeModal: mocks.closeModal,
     modalData: null,
     openModalAfterClose: mocks.openModalAfterClose,
+    rememberModalState: mocks.rememberModalState,
+    clearRememberedModalState: mocks.clearRememberedModalState,
   }),
 }))
 
@@ -38,6 +42,8 @@ describe('LoginModal', () => {
     mocks.closeModal.mockReset()
     mocks.login.mockReset()
     mocks.openModalAfterClose.mockReset()
+    mocks.rememberModalState.mockReset()
+    mocks.clearRememberedModalState.mockReset()
     mocks.resendVerification.mockReset()
     mocks.setError.mockReset()
     mocks.useLoginForm.mockReset()
@@ -89,5 +95,15 @@ describe('LoginModal', () => {
     render(<LoginModal />)
 
     expect(screen.queryByRole('button', { name: 'Отправить письмо подтверждения ещё раз' })).not.toBeInTheDocument()
+  })
+
+  it('remembers unverified email state for reopening login modal', () => {
+    render(<LoginModal />)
+
+    expect(mocks.rememberModalState).toHaveBeenCalledWith('login', {
+      identifier: 'user@test.com',
+      message: '',
+      resendMessage: '',
+    })
   })
 })

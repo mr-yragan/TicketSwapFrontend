@@ -29,6 +29,6 @@ describe('ProfilePageHeader', () => {
 
     expect(screen.getByText('Пользователь: user@test.com')).toBeInTheDocument()
     expect(screen.getByText('ID: 15')).toBeInTheDocument()
-    expect(screen.getByText('Роль: ADMIN')).toBeInTheDocument()
+    expect(screen.getByText('Роль: Админ')).toBeInTheDocument()
   })
 })

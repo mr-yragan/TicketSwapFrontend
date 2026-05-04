@@ -66,6 +66,10 @@ export const ticketsApi = {
     return await getData(`/tickets/${ticketId}/files`)
   },
 
+  async getFilePreviews(ticketId) {
+    return await getData(`/tickets/${ticketId}/files/previews`)
+  },
+
   async getFileDownloadUrl(ticketId, fileId) {
     return await getData(`/tickets/${ticketId}/files/${fileId}/download-url`)
   },

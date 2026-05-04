@@ -42,6 +42,33 @@ const buildSellPayload = (form) => ({
   sellerComment: form.sellerComment.trim() || undefined,
 })
 
+const buildFileKey = (file) => (
+  [file.name, file.size, file.lastModified, file.type].join(':')
+)
+
+const mergeFiles = (currentFiles, newFiles) => {
+  const selectedFiles = Array.from(newFiles || [])
+
+  if (selectedFiles.length === 0) {
+    return currentFiles
+  }
+
+  const nextFiles = [...currentFiles]
+  const existingKeys = new Set(currentFiles.map(buildFileKey))
+
+  for (const file of selectedFiles) {
+    const fileKey = buildFileKey(file)
+    if (existingKeys.has(fileKey)) {
+      continue
+    }
+
+    nextFiles.push(file)
+    existingKeys.add(fileKey)
+  }
+
+  return nextFiles
+}
+
 export function useSellForm(onSuccess) {
   const [form, setForm] = useState(initialFormState)
   const [files, setFiles] = useState([])
@@ -54,7 +81,15 @@ export function useSellForm(onSuccess) {
   }, [])
 
   const handleFilesChange = useCallback((newFiles) => {
-    setFiles(Array.from(newFiles))
+    setFiles((currentFiles) => mergeFiles(currentFiles, newFiles))
+  }, [])
+
+  const removeFile = useCallback((fileIndex) => {
+    setFiles((currentFiles) => currentFiles.filter((_, index) => index !== fileIndex))
+  }, [])
+
+  const clearFiles = useCallback(() => {
+    setFiles([])
   }, [])
 
   const validateFiles = useCallback(() => {
@@ -158,6 +193,8 @@ export function useSellForm(onSuccess) {
     handleFieldChange,
     handleFilesChange,
     handleSubmit,
+    removeFile,
+    clearFiles,
     setError,
     setSuccess,
     constants: { MAX_TEXT_LENGTH, MAX_FILE_SIZE, MAX_FILES_COUNT, ALLOWED_FILE_TYPES },

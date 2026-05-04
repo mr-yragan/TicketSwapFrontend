@@ -5,10 +5,15 @@ import { TicketCarousel } from '@/components/TicketCarousel'
 
 const mocks = vi.hoisted(() => ({
   useTicketFiles: vi.fn(),
+  useTicketFilePreviews: vi.fn(),
 }))
 
 vi.mock('@/hooks/useTicketFiles', () => ({
   useTicketFiles: mocks.useTicketFiles,
+}))
+
+vi.mock('@/hooks/useTicketFilePreviews', () => ({
+  useTicketFilePreviews: mocks.useTicketFilePreviews,
 }))
 
 describe('TicketCarousel', () => {
@@ -17,6 +22,17 @@ describe('TicketCarousel', () => {
   beforeEach(() => {
     window.open = vi.fn()
     mocks.useTicketFiles.mockReset()
+    mocks.useTicketFilePreviews.mockReset()
+    mocks.useTicketFilePreviews.mockReturnValue({
+      previews: [
+        {
+          fileId: 1,
+          url: 'https://example.com/blur-preview.png',
+        },
+      ],
+      loading: false,
+      error: null,
+    })
     mocks.useTicketFiles.mockReturnValue({
       error: null,
       files: [
@@ -51,9 +67,10 @@ describe('TicketCarousel', () => {
 
     render(<TicketCarousel ticketId={77} />)
 
-    expect(screen.getByText('Файлы билета скрыты')).toBeInTheDocument()
+    expect(screen.getByText('Защищённое превью')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Проверить доступ к оригиналам' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Проверить доступ к файлам' }))
+    await user.click(screen.getByRole('button', { name: 'Проверить доступ к оригиналам' }))
 
     expect(await screen.findByText('Доступные файлы')).toBeInTheDocument()
     expect(screen.getByText('ticket-image.jpg')).toBeInTheDocument()

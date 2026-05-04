@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
 import { Settings2, Shield, UserRound } from 'lucide-react'
 
+const ROLE_LABELS = {
+  USER: 'Пользователь',
+  ORGANIZER: 'Организатор',
+  ADMIN: 'Админ',
+}
+
 export function ProfilePageHeader({
   userId,
   userEmail,
@@ -17,6 +23,8 @@ export function ProfilePageHeader({
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const settingsRef = useRef(null)
+  const normalizedRole = String(userRole || '').toUpperCase()
+  const roleLabel = ROLE_LABELS[normalizedRole] || userRole || '—'
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,7 +61,7 @@ export function ProfilePageHeader({
           <p className="text-sm text-gray-500">Пользователь: {userEmail || 'гость'}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
             <span className="rounded-full bg-gray-100 px-2.5 py-1">ID: {userId ?? '—'}</span>
-            <span className="rounded-full bg-gray-100 px-2.5 py-1">Роль: {userRole || '—'}</span>
+            <span className="rounded-full bg-gray-100 px-2.5 py-1">Роль: {roleLabel}</span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-700">Подтверждение email:</span>

@@ -6,6 +6,7 @@ export function ModalProvider({ children }) {
   const [currentModal, setCurrentModal] = useState(null)
   const [modalData, setModalData] = useState(null)
   const timeoutIdsRef = useRef(new Set())
+  const modalMemoryRef = useRef(new Map())
   const clearScheduledActions = useCallback(() => {
     timeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
     timeoutIdsRef.current.clear()
@@ -30,7 +31,12 @@ export function ModalProvider({ children }) {
   const openModal = useCallback((modalName, data = null) => {
     clearScheduledActions()
     setCurrentModal(modalName)
-    setModalData(data)
+    if (data != null) {
+      setModalData(data)
+      return
+    }
+
+    setModalData(modalMemoryRef.current.get(modalName) ?? null)
   }, [clearScheduledActions])
 
   const closeModal = useCallback(() => {
@@ -48,13 +54,36 @@ export function ModalProvider({ children }) {
     }, delay)
   }, [clearScheduledActions, openModal, schedule])
 
+  const rememberModalState = useCallback((modalName, data) => {
+    if (!modalName) {
+      return
+    }
+
+    if (data == null) {
+      modalMemoryRef.current.delete(modalName)
+      return
+    }
+
+    modalMemoryRef.current.set(modalName, data)
+  }, [])
+
+  const clearRememberedModalState = useCallback((modalName) => {
+    if (!modalName) {
+      return
+    }
+
+    modalMemoryRef.current.delete(modalName)
+  }, [])
+
   const value = useMemo(() => ({
     currentModal,
     modalData,
     openModal,
     closeModal,
     openModalAfterClose,
-  }), [closeModal, currentModal, modalData, openModal, openModalAfterClose])
+    rememberModalState,
+    clearRememberedModalState,
+  }), [clearRememberedModalState, closeModal, currentModal, modalData, openModal, openModalAfterClose, rememberModalState])
 
   return (
     <ModalContext.Provider value={value}>

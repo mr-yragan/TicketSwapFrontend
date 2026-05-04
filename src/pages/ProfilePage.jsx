@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth, useModal } from '@/context'
+import { useTicketsRefresh } from '@/context'
 import { authApi, listingsApi, profileApi, purchaseApi, purchasesApi, ticketsApi, twoFactorApi } from '@/api'
 import { formatErrorMessage } from '@/api/formatters'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -12,8 +13,10 @@ const LOGIN_PATTERN = /^(?!.*@)[A-Za-z0-9_.-]+$/
 export default function ProfilePage() {
   const { user, logout } = useAuth() || {}
   const { openModal } = useModal()
+  const { triggerRefresh } = useTicketsRefresh()
   const location = useLocation()
   const navigate = useNavigate()
+  const removedListingIdsRef = useRef(new Set())
   const [activeListings, setActiveListings] = useState([])
   const [archivedListings, setArchivedListings] = useState([])
   const [upcomingPurchases, setUpcomingPurchases] = useState([])
@@ -38,6 +41,14 @@ export default function ProfilePage() {
 
   // Используем emailVerified из user (AuthContext), не из локального состояния
   const emailVerified = user?.emailVerified ?? false
+
+  const filterRemovedListings = useCallback((items) => {
+    if (!Array.isArray(items)) {
+      return []
+    }
+
+    return items.filter((item) => !removedListingIdsRef.current.has(item?.id))
+  }, [])
 
   const loadProfileData = useCallback(async () => {
     if (!user) {
@@ -80,8 +91,8 @@ export default function ProfilePage() {
         purchasesApi.getMyHolds(),
       ])
 
-      setActiveListings(Array.isArray(activeListingsData) ? activeListingsData : [])
-      setArchivedListings(Array.isArray(archivedListingsData) ? archivedListingsData : [])
+      setActiveListings(filterRemovedListings(activeListingsData))
+      setArchivedListings(filterRemovedListings(archivedListingsData))
       setUpcomingPurchases(Array.isArray(activePurchasesData) ? activePurchasesData : [])
       setPastPurchases(Array.isArray(archivedPurchasesData) ? archivedPurchasesData : [])
       setActiveHolds(Array.isArray(holdsData) ? holdsData : [])
@@ -116,7 +127,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [filterRemovedListings, user])
 
   useEffect(() => {
     loadProfileData()
@@ -199,6 +210,10 @@ export default function ProfilePage() {
 
     try {
       await ticketsApi.remove(ticket.id)
+      removedListingIdsRef.current.add(ticket.id)
+      setActiveListings((current) => current.filter((item) => item.id !== ticket.id))
+      setArchivedListings((current) => current.filter((item) => item.id !== ticket.id))
+      triggerRefresh()
       await loadProfileData()
       setSuccessMessage('Объявление снято с продажи')
     } catch (deleteError) {

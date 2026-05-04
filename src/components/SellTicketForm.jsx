@@ -4,6 +4,7 @@ import { useAuth } from '@/context'
 import { useTicketsRefresh } from '@/context'
 import { DismissibleAlert } from '@/components/ui'
 import { FormInput } from './FormInput'
+import { OrganizerSelect } from './OrganizerSelect'
 import { useSellForm } from '@/hooks/useSellForm'
 import { useOrganizerCatalog } from '@/features/organizer/hooks/useOrganizerCatalog'
 
@@ -16,16 +17,30 @@ const toDateTimeInput = (value) => {
   return localDate.toISOString().slice(0, 16)
 }
 
-const formatMode = (mode) => {
-  if (mode === 'MANUAL') return 'ручная проверка'
-  if (mode === 'EXTERNAL_API') return 'автоматическая проверка'
-  return mode || 'тип не указан'
+const getOrganizerHint = (organizer) => {
+  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) return 'Проверка у партнёра'
+  if (organizer?.verificationMode === 'MANUAL') return 'Проверка у организатора'
+  return 'Тип проверки не указан'
 }
 
 export default function SellTicketForm({ onSuccess } = {}) {
   const { token, user } = useAuth()
   const { triggerRefresh } = useTicketsRefresh()
-  const { form, files, loading, error, success, handleFieldChange, handleFilesChange, handleSubmit, setError, setSuccess, constants } = useSellForm(onSuccess)
+  const {
+    form,
+    files,
+    loading,
+    error,
+    success,
+    handleFieldChange,
+    handleFilesChange,
+    handleSubmit,
+    removeFile,
+    clearFiles,
+    setError,
+    setSuccess,
+    constants,
+  } = useSellForm(onSuccess)
   const { clearError: clearCatalogError, error: catalogError, loading: organizersLoading, organizers } = useOrganizerCatalog()
   const [eventQuery, setEventQuery] = useState('')
   const [eventResults, setEventResults] = useState([])
@@ -152,23 +167,18 @@ export default function SellTicketForm({ onSuccess } = {}) {
         />
 
         <label className="text-sm text-gray-700 font-medium">Организатор *</label>
-        <select
+        <OrganizerSelect
           value={form.organizerId}
-          onChange={(event) => handleOrganizerChange(event.target.value)}
-          required
-          disabled={organizersLoading}
-          className="border rounded px-3 py-2 text-sm w-full">
-          <option value="">{organizersLoading ? 'Загрузка...' : 'Выберите организатора'}</option>
-          {organizers.map((organizer) => (
-            <option key={organizer.id} value={organizer.id}>
-              {organizer.name} · {formatMode(organizer.verificationMode)}
-            </option>
-          ))}
-        </select>
+          onChange={handleOrganizerChange}
+          organizers={organizers}
+          loading={organizersLoading}
+          disabled={loading}
+        />
+        <input type="hidden" value={form.organizerId} required readOnly />
 
         {selectedOrganizer && (
           <div className="text-xs text-gray-500">
-            Выбран организатор: {selectedOrganizer.name}, {formatMode(selectedOrganizer.verificationMode)}.
+            Выбран организатор: {selectedOrganizer.name}. {getOrganizerHint(selectedOrganizer)}.
           </div>
         )}
 
@@ -268,22 +278,45 @@ export default function SellTicketForm({ onSuccess } = {}) {
         <div className="border-t pt-3">
           <label className="text-sm text-gray-700 block mb-2">Загрузить файл билета *</label>
           <p className="text-xs text-gray-500 mb-2">
-            Допустимые форматы: PDF, PNG, JPG. Максимум {constants.MAX_FILES_COUNT} файлов, каждый до 10 MB.
+            Допустимые форматы: PDF, PNG, JPG. Можно добавлять файлы по одному или несколько раз подряд. Максимум {constants.MAX_FILES_COUNT} файлов, каждый до 10 MB.
           </p>
           <input
             type="file"
             multiple
             accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf"
-            onChange={(event) => handleFilesChange(event.target.files)}
+            onChange={(event) => {
+              handleFilesChange(event.target.files)
+              event.target.value = ''
+            }}
             className="w-full border rounded px-3 py-2 text-sm"
             disabled={loading}
           />
           {files.length > 0 && (
             <div className="mt-2 text-xs text-gray-600">
-              <p className="font-medium">Выбрано файлов: {files.length}</p>
-              <ul className="list-disc list-inside">
-                {Array.from(files).map((file, index) => (
-                  <li key={index}>{file.name} ({(file.size / 1024).toFixed(1)} KB)</li>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="font-medium">Выбрано файлов: {files.length}</p>
+                <button
+                  type="button"
+                  onClick={clearFiles}
+                  className="text-xs font-medium text-gray-500 transition-colors hover:text-gray-900"
+                >
+                  Очистить всё
+                </button>
+              </div>
+              <ul className="space-y-2">
+                {files.map((file, index) => (
+                  <li key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
+                    <span className="min-w-0 truncate">
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="shrink-0 text-xs font-medium text-red-600 transition-colors hover:text-red-700"
+                    >
+                      Убрать
+                    </button>
+                  </li>
                 ))}
               </ul>
             </div>

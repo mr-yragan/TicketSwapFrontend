@@ -145,7 +145,14 @@ export function useOrganizerWorkspace(isOrganizer) {
       setStatus({ type: 'success', message: 'Мероприятие удалено.' })
       await loadOrganizerData()
     } catch (deleteError) {
-      setStatus({ type: 'error', message: getOrganizerApiErrorMessage(deleteError, 'Не удалось удалить мероприятие') })
+      const apiMessage = deleteError?.response?.data?.message || ''
+      const deleteBlockedByTickets = deleteError?.response?.status === 409 || /привязаны билеты/i.test(apiMessage)
+      setStatus({
+        type: 'error',
+        message: deleteBlockedByTickets
+          ? 'Событие нельзя удалить, потому что к нему уже привязаны билеты. Это ограничение приходит с сервера.'
+          : getOrganizerApiErrorMessage(deleteError, 'Не удалось удалить мероприятие'),
+      })
     } finally {
       setEventAction(null)
     }

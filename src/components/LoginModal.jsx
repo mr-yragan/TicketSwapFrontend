@@ -4,7 +4,7 @@ import { Button, DismissibleAlert, FormField, Modal } from '@/components/ui'
 import { X } from 'lucide-react'
 import { useLoginForm } from '@/hooks/useLoginForm'
 import { authApi } from '@/api'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const isUnverifiedEmailError = (message) => {
   if (typeof message !== 'string') {
@@ -17,7 +17,13 @@ const isUnverifiedEmailError = (message) => {
 }
 
 export function LoginModal() {
-  const { closeModal, modalData, openModalAfterClose } = useModal()
+  const {
+    closeModal,
+    modalData,
+    openModalAfterClose,
+    rememberModalState,
+    clearRememberedModalState,
+  } = useModal()
   const { login } = useAuth()
   const [infoMessage, setInfoMessage] = useState(() => (
     typeof modalData?.message === 'string' ? modalData.message : ''
@@ -27,6 +33,7 @@ export function LoginModal() {
 
   const handleLoginResult = (result) => {
     if (result?.requiresTwoFactor) {
+      clearRememberedModalState('login')
       openModalAfterClose('twoFactor', {
         challengeId: result.challengeId,
         expiresAt: result.expiresAt,
@@ -36,16 +43,40 @@ export function LoginModal() {
       return
     }
 
+    clearRememberedModalState('login')
     closeModal()
   }
 
-  const { form, error, loading, handleFieldChange, handleSubmit, setError } = useLoginForm(handleLoginResult)
+  const initialForm = useMemo(() => ({
+    identifier: modalData?.identifier || '',
+  }), [modalData?.identifier])
+
+  const { form, error, loading, handleFieldChange, handleSubmit, setError } = useLoginForm(handleLoginResult, initialForm)
+
+  useEffect(() => {
+    if (!isUnverifiedEmailError(error)) {
+      clearRememberedModalState('login')
+      return
+    }
+
+    rememberModalState('login', {
+      identifier: form.identifier,
+      message: infoMessage,
+      resendMessage,
+    })
+  }, [clearRememberedModalState, error, form.identifier, infoMessage, rememberModalState, resendMessage])
+
+  const handleCloseModal = () => {
+    closeModal()
+  }
 
   const handleSwitchToRegister = () => {
+    clearRememberedModalState('login')
     openModalAfterClose('register')
   }
 
   const handleForgotPassword = () => {
+    clearRememberedModalState('login')
     openModalAfterClose('forgotPassword')
   }
 
@@ -69,9 +100,9 @@ export function LoginModal() {
   const canResendVerification = form.identifier.includes('@') && isUnverifiedEmailError(error)
 
   return (
-    <Modal onClose={closeModal}>
+    <Modal onClose={handleCloseModal}>
       <button
-        onClick={closeModal}
+        onClick={handleCloseModal}
         className="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
         <X size={24} />
       </button>

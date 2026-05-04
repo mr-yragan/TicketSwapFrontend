@@ -14,6 +14,10 @@ const isTicketFileAccessRequest = (url = '') => (
   /\/tickets\/[^/]+\/(file|files|reissued-file)(\/.*)?$/.test(url)
 )
 
+const isTicketFilePreviewRequest = (url = '') => (
+  /\/tickets\/[^/]+\/files\/previews$/.test(url)
+)
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -43,8 +47,12 @@ apiClient.interceptors.response.use(
       (error.response?.status === 401 || error.response?.status === 403)
       && isTicketFileAccessRequest(requestUrl)
     )
+    const isExpectedTicketFilePreviewNotFound = (
+      error.response?.status === 404
+      && isTicketFilePreviewRequest(requestUrl)
+    )
 
-    if (isExpectedTicketFileAccessError) {
+    if (isExpectedTicketFileAccessError || isExpectedTicketFilePreviewNotFound) {
       return Promise.reject(error)
     }
 

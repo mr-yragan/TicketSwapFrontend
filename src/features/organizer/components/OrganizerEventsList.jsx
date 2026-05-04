@@ -7,7 +7,7 @@ export function OrganizerEventsList({ canMutate, eventAction, events, onDelete, 
     <div className="rounded-lg border border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-5 py-4">
         <h2 className="text-lg font-semibold text-gray-950">Мои мероприятия</h2>
-        <p className="text-sm text-gray-500">Удаление запрещается бэком, если к событию уже привязаны билеты.</p>
+        <p className="text-sm text-gray-500">Если к мероприятию уже привязаны билеты, сервер не даст его удалить.</p>
       </div>
 
       <div className="divide-y divide-gray-100">
@@ -31,6 +31,15 @@ export function OrganizerEventsList({ canMutate, eventAction, events, onDelete, 
 }
 
 function EventRow({ canMutate, eventAction, eventItem, onDelete, onEdit }) {
+  const isEditingDisabled = !canMutate || Boolean(eventAction)
+  const isDeletingCurrentEvent = eventAction === `delete-${eventItem.id}`
+  const isDeleteDisabled = !canMutate || Boolean(eventAction)
+  const deleteHint = !canMutate
+    ? 'Изменять и удалять мероприятия могут только активные организаторы с ручной проверкой.'
+    : eventAction && !isDeletingCurrentEvent
+      ? 'Сначала дождитесь завершения текущего действия.'
+      : 'Если к этому мероприятию уже привязаны билеты, сервер не позволит его удалить.'
+
   return (
     <div className="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
       <div className="min-w-0">
@@ -49,20 +58,22 @@ function EventRow({ canMutate, eventAction, eventItem, onDelete, onEdit }) {
           type="button"
           title="Редактировать событие"
           onClick={() => onEdit(eventItem)}
-          disabled={!canMutate || Boolean(eventAction)}
+          disabled={isEditingDisabled}
           className="h-10 bg-white text-black border border-gray-300 px-3 gap-2">
           <Pencil size={16} />
           Изменить
         </Button>
-        <Button
-          type="button"
-          title="Удалить событие"
-          onClick={() => onDelete(eventItem)}
-          disabled={!canMutate || Boolean(eventAction)}
-          className="h-10 bg-white text-black border border-gray-300 px-3 gap-2">
-          {eventAction === `delete-${eventItem.id}` ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-          Удалить
-        </Button>
+        <span title={deleteHint}>
+          <Button
+            type="button"
+            title={deleteHint}
+            onClick={() => onDelete(eventItem)}
+            disabled={isDeleteDisabled}
+            className="h-10 bg-white text-black border border-gray-300 px-3 gap-2">
+            {isDeletingCurrentEvent ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+            Удалить
+          </Button>
+        </span>
       </div>
     </div>
   )
