@@ -133,7 +133,9 @@ export function TicketCarousel({ ticketId }) {
               <img
                 src={currentSlide.url}
                 alt={currentSlide.alt}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover ${
+                  isShowingOriginalImages ? '' : 'scale-105 blur-md sm:blur-lg'
+                }`}
               />
             ) : (
               <div className="text-gray-400">Загрузка изображения...</div>

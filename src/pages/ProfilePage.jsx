@@ -185,8 +185,12 @@ export default function ProfilePage() {
       return
     }
 
+    const listingSnapshot = activeListings.find((ticket) => ticket?.id === ticketId)
+      || archivedListings.find((ticket) => ticket?.id === ticketId)
+
     openModal('editListing', {
       listingId: ticketId,
+      listingSnapshot,
       onUpdated: async () => {
         await loadProfileData()
         setSuccessMessage('Объявление обновлено')

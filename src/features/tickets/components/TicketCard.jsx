@@ -26,7 +26,7 @@ export function TicketCard({ ticket }) {
             <img
               src={firstPreview}
               alt={`Защищённое превью билета ${artist}`}
-              className="h-full w-full object-cover"
+              className="h-full w-full scale-105 object-cover blur-md sm:blur-lg"
               loading="lazy"
             />
             <div className="absolute inset-x-3 bottom-3 rounded-lg bg-white/90 px-3 py-2 text-left shadow-sm backdrop-blur-sm">

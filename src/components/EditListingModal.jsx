@@ -57,6 +57,7 @@ const buildUpdatePayload = (form) => ({
 export function EditListingModal() {
   const { closeModal, modalData } = useModal()
   const listingId = modalData?.listingId
+  const listingSnapshot = modalData?.listingSnapshot
   const onUpdated = modalData?.onUpdated
   const { organizers, loading: organizersLoading } = useOrganizerCatalog()
 
@@ -67,6 +68,31 @@ export function EditListingModal() {
   const [eventQuery, setEventQuery] = useState('')
   const [eventResults, setEventResults] = useState([])
   const [eventSearchLoading, setEventSearchLoading] = useState(false)
+  const listingSnapshotDefaults = useMemo(() => ({
+    uid: listingSnapshot?.uid || '',
+    eventName: listingSnapshot?.eventName || '',
+    eventDate: listingSnapshot?.eventDate || '',
+    venue: listingSnapshot?.venue || '',
+    price: listingSnapshot?.price,
+    additionalInfo: listingSnapshot?.additionalInfo || '',
+    sellerComment: listingSnapshot?.sellerComment || '',
+    organizerId: listingSnapshot?.organizerId || '',
+    organizerName: listingSnapshot?.organizerName || '',
+    selectedEventId: listingSnapshot?.selectedEventId || '',
+    eventId: listingSnapshot?.eventId || '',
+  }), [
+    listingSnapshot?.additionalInfo,
+    listingSnapshot?.eventDate,
+    listingSnapshot?.eventId,
+    listingSnapshot?.eventName,
+    listingSnapshot?.organizerId,
+    listingSnapshot?.organizerName,
+    listingSnapshot?.price,
+    listingSnapshot?.selectedEventId,
+    listingSnapshot?.sellerComment,
+    listingSnapshot?.uid,
+    listingSnapshot?.venue,
+  ])
 
   const selectedOrganizer = useMemo(() => {
     return organizers.find((organizer) => String(organizer.id) === String(form.organizerId))
@@ -116,19 +142,31 @@ export function EditListingModal() {
         }
 
         setForm({
-          uid: details?.uid || '',
-          eventName: details?.eventName || '',
-          eventDate: toDateTimeInput(details?.eventDate),
-          venue: details?.venue || '',
-          price: details?.price != null ? String(details.price) : '',
-          additionalInfo: details?.additionalInfo || '',
-          sellerComment: details?.sellerComment || '',
-          organizerId: details?.organizerId ? String(details.organizerId) : '',
-          organizerName: details?.organizerName || '',
-          selectedEventId: details?.selectedEventId ? String(details.selectedEventId) : '',
-          eventId: details?.eventId || '',
+          uid: details?.uid || listingSnapshotDefaults.uid,
+          eventName: details?.eventName || listingSnapshotDefaults.eventName,
+          eventDate: toDateTimeInput(details?.eventDate || listingSnapshotDefaults.eventDate),
+          venue: details?.venue || listingSnapshotDefaults.venue,
+          price: details?.price != null
+            ? String(details.price)
+            : listingSnapshotDefaults.price != null
+              ? String(listingSnapshotDefaults.price)
+              : '',
+          additionalInfo: details?.additionalInfo || listingSnapshotDefaults.additionalInfo,
+          sellerComment: details?.sellerComment || listingSnapshotDefaults.sellerComment,
+          organizerId: details?.organizerId
+            ? String(details.organizerId)
+            : listingSnapshotDefaults.organizerId
+              ? String(listingSnapshotDefaults.organizerId)
+              : '',
+          organizerName: details?.organizerName || listingSnapshotDefaults.organizerName,
+          selectedEventId: details?.selectedEventId
+            ? String(details.selectedEventId)
+            : listingSnapshotDefaults.selectedEventId
+              ? String(listingSnapshotDefaults.selectedEventId)
+              : '',
+          eventId: details?.eventId || listingSnapshotDefaults.eventId,
         })
-        setEventQuery(details?.eventName || '')
+        setEventQuery(details?.eventName || listingSnapshotDefaults.eventName)
       } catch (loadError) {
         if (!cancelled) {
           setError(formatErrorMessage(loadError, 'Не удалось загрузить объявление'))
@@ -145,7 +183,7 @@ export function EditListingModal() {
     return () => {
       cancelled = true
     }
-  }, [listingId])
+  }, [listingId, listingSnapshotDefaults])
 
   useEffect(() => {
     const query = eventQuery.trim()
@@ -304,7 +342,7 @@ export function EditListingModal() {
             required
           />
           <p className="text-xs text-gray-500">
-            Если поле пустое, укажите UID вручную. Текущий backend не возвращает его в ответе для редактирования.
+            Если UID не пришёл с backend, мы подставим его из вашего объявления. Вручную вводить его нужно только в крайнем случае.
           </p>
 
           <label className="text-sm font-medium text-gray-700">Организатор *</label>

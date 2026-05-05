@@ -68,6 +68,7 @@ describe('TicketCarousel', () => {
     render(<TicketCarousel ticketId={77} />)
 
     expect(screen.getByText('Защищённое превью')).toBeInTheDocument()
+    expect(screen.getByAltText('Защищённое превью файла #1')).toHaveClass('blur-md')
     expect(screen.getByRole('button', { name: 'Проверить доступ к оригиналам' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Проверить доступ к оригиналам' }))
