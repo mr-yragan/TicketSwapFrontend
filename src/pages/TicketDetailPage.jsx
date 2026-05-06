@@ -114,6 +114,13 @@ const formatDateTime = (value) => {
   })
 }
 
+/*
+  Детальная страница объявления.
+  Сюда сходятся три независимых источника данных:
+  - детали самого билета;
+  - каталог организаторов, чтобы понять тип проверки;
+  - история статусов, но только для админа.
+*/
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -141,6 +148,7 @@ export default function TicketDetailPage() {
       return null
     }
 
+    // В деталях билета нет полного organizer-объекта, поэтому восстанавливаем тип проверки через каталог.
     return Boolean(organizer.hasExternalApi)
   }, [details?.organizerName, organizers])
 

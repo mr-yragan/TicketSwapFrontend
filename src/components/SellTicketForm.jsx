@@ -7,21 +7,7 @@ import { FormInput } from './FormInput'
 import { OrganizerSelect } from './OrganizerSelect'
 import { useSellForm } from '@/hooks/useSellForm'
 import { useOrganizerCatalog } from '@/features/organizer/hooks/useOrganizerCatalog'
-
-const toDateTimeInput = (value) => {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-  return localDate.toISOString().slice(0, 16)
-}
-
-const getOrganizerHint = (organizer) => {
-  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) return 'Проверка у партнёра'
-  if (organizer?.verificationMode === 'MANUAL') return 'Проверка у организатора'
-  return 'Тип проверки не указан'
-}
+import { getOrganizerHint, toDateTimeInput } from '@/features/organizer/utils'
 
 export default function SellTicketForm({ onSuccess } = {}) {
   const { token, user } = useAuth()

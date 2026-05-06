@@ -2,6 +2,10 @@ import { useCallback } from 'react'
 import { authApi, profileApi } from '@/api'
 import { clearAuthData, saveAuthData } from './storage'
 
+/*
+  Сценарии логина/регистрации вынесены в hook, чтобы AuthProvider хранил состояние,
+  а детали 2FA и пост-логина не лежали прямо в JSX.
+*/
 const resolveTwoFactorPayload = (data = {}) => {
   const requiresTwoFactor = Boolean(
     data.requiresTwoFactor ?? data.twoFactorRequired ?? data.twoFactorChallengeId ?? data.challengeId
@@ -26,6 +30,7 @@ export function useAuthLogic(setCurrentUser) {
     saveAuthData({ email: safeFallbackEmail, token })
 
     try {
+      // После любого способа входа перечитываем профиль, чтобы получить роль, id и emailVerified.
       const profile = await profileApi.getProfile()
       const resolvedEmail = profile?.email || safeFallbackEmail
       const userWithId = {

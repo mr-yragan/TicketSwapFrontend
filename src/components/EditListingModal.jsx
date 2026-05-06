@@ -7,6 +7,7 @@ import { ticketsApi } from '@/api'
 import { organizerApi } from '@/api/apis/organizerApi'
 import { formatErrorMessage } from '@/api/formatters'
 import { useOrganizerCatalog } from '@/features/organizer/hooks/useOrganizerCatalog'
+import { getOrganizerHint, toDateTimeInput } from '@/features/organizer/utils'
 
 const EMPTY_FORM = {
   uid: '',
@@ -20,24 +21,6 @@ const EMPTY_FORM = {
   organizerName: '',
   selectedEventId: '',
   eventId: '',
-}
-
-const toDateTimeInput = (value) => {
-  if (!value) return ''
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-  return localDate.toISOString().slice(0, 16)
-}
-
-const getOrganizerHint = (organizer) => {
-  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) return 'Проверка у партнёра'
-  if (organizer?.verificationMode === 'MANUAL') return 'Проверка у организатора'
-  return 'Тип проверки не указан'
 }
 
 const buildUpdatePayload = (form) => ({
@@ -55,7 +38,7 @@ const buildUpdatePayload = (form) => ({
 })
 
 export function EditListingModal() {
-  const { closeModal, modalData } = useModal()
+  const { closeModal, confirmAction, modalData } = useModal()
   const listingId = modalData?.listingId
   const listingSnapshot = modalData?.listingSnapshot
   const onUpdated = modalData?.onUpdated
@@ -301,10 +284,21 @@ export function EditListingModal() {
       return
     }
 
-    setSaving(true)
-    setError('')
-
     try {
+      const confirmed = await confirmAction({
+        title: 'Сохранить изменения объявления?',
+        message: 'После сохранения билет может снова отправиться на проверку организатору.',
+        confirmLabel: 'Сохранить изменения',
+        tone: 'primary',
+      })
+
+      if (!confirmed) {
+        return
+      }
+
+      setSaving(true)
+      setError('')
+
       const payload = buildUpdatePayload(form)
       const updatedListing = await ticketsApi.update(listingId, payload)
       await onUpdated?.(updatedListing)

@@ -7,8 +7,6 @@ const SORT_OPTIONS = [
   { value: 'price-desc', label: 'Дороже' },
 ]
 
-const INPUT_BASE_CLASSES = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black'
-
 export function FiltersPanel({
   filters,
   onApply,
@@ -169,7 +167,7 @@ function FilterInput({ compact = false, hint = '', label, onChange, type = 'text
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={INPUT_BASE_CLASSES}
+        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-black"
         {...props}
       />
       {hint && <span className="mt-2 block text-xs text-gray-500">{hint}</span>}
@@ -184,7 +182,7 @@ function FilterSelect({ children, label, onChange, value, withoutMargin = false 
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={INPUT_BASE_CLASSES}>
+        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-black">
         {children}
       </select>
     </label>

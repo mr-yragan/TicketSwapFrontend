@@ -1,17 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
-
-const getOrganizerHint = (organizer) => {
-  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) {
-    return 'Проверка у партнёра'
-  }
-
-  if (organizer?.verificationMode === 'MANUAL') {
-    return 'Проверка у организатора'
-  }
-
-  return 'Тип проверки не указан'
-}
+import { getOrganizerHint } from '@/features/organizer/utils'
 
 export function OrganizerSelect({
   disabled = false,

@@ -1,4 +1,4 @@
-import { useAuth } from '@/context'
+import { useAuth, useModal } from '@/context'
 import { AdminAuditLogTable } from '@/features/admin/components/AdminAuditLogTable'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminPurchaseOrdersTable } from '@/features/admin/components/AdminPurchaseOrdersTable'
@@ -9,24 +9,46 @@ import { useAdminAuditLog } from '@/features/admin/hooks/useAdminAuditLog'
 import { useAdminOrganizers } from '@/features/admin/hooks/useAdminOrganizers'
 import { useAdminPurchaseOrders } from '@/features/admin/hooks/useAdminPurchaseOrders'
 
+/*
+  Админка собирает три независимые зоны:
+  - организаторы;
+  - журнал заказов и возвратов;
+  - аудит действий.
+  Сами запросы и состояние живут в feature-hooks, а страница только связывает их с UI и confirm-диалогами.
+*/
 export default function AdminPage() {
   const { user } = useAuth()
+  const { confirmAction } = useModal()
   const role = (user?.role || '').toUpperCase()
   const isAdmin = role === 'ADMIN'
   const adminState = useAdminOrganizers(isAdmin)
   const ordersState = useAdminPurchaseOrders(isAdmin)
   const auditState = useAdminAuditLog(isAdmin)
 
-  const handleToggleBan = (organizer) => {
-    if (!organizer.banned && !window.confirm(`Заблокировать организатора "${organizer.name}"?`)) {
+  const handleToggleBan = async (organizer) => {
+    const confirmed = await confirmAction({
+      title: organizer.banned ? 'Разблокировать организатора?' : 'Заблокировать организатора?',
+      message: organizer.banned
+        ? `Организатор «${organizer.name}» снова сможет работать в системе.`
+        : `Организатор «${organizer.name}» потеряет доступ к рабочему процессу, пока его не разблокируют.`,
+      confirmLabel: organizer.banned ? 'Разблокировать' : 'Заблокировать',
+    })
+
+    if (!confirmed) {
       return
     }
 
     adminState.toggleOrganizerBan(organizer)
   }
 
-  const handleCompleteRefund = (order) => {
-    if (!window.confirm(`Подтвердить возврат по заказу #${order.id}?`)) {
+  const handleCompleteRefund = async (order) => {
+    const confirmed = await confirmAction({
+      title: 'Подтвердить возврат?',
+      message: `Возврат по заказу #${order.id} будет отмечен как завершённый.`,
+      confirmLabel: 'Подтвердить возврат',
+    })
+
+    if (!confirmed) {
       return
     }
 

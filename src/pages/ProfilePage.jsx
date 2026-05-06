@@ -10,9 +10,19 @@ import { ProfilePageTabs } from './profile/ProfilePageTabs'
 
 const LOGIN_PATTERN = /^(?!.*@)[A-Za-z0-9_.-]+$/
 
+/*
+  Личный кабинет — самая "оркестровая" страница приложения.
+  Здесь в одном месте сходятся:
+  - мои объявления;
+  - архив;
+  - покупки и резервы;
+  - журнал заказов;
+  - настройки профиля и 2FA.
+  Поэтому эта страница знает о нескольких API одновременно и разводит UI по вкладкам.
+*/
 export default function ProfilePage() {
   const { user, logout } = useAuth() || {}
-  const { openModal } = useModal()
+  const { confirmAction, openModal } = useModal()
   const { triggerRefresh } = useTicketsRefresh()
   const location = useLocation()
   const navigate = useNavigate()
@@ -39,7 +49,7 @@ export default function ProfilePage() {
   const [profileForm, setProfileForm] = useState({ login: '' })
   const [profileSaving, setProfileSaving] = useState(false)
 
-  // Используем emailVerified из user (AuthContext), не из локального состояния
+  // Источник истины для подтверждения почты — auth context, а не локальная копия страницы.
   const emailVerified = user?.emailVerified ?? false
 
   const filterRemovedListings = useCallback((items) => {
@@ -62,6 +72,7 @@ export default function ProfilePage() {
       const profile = await profileApi.getProfile()
       const legacyProfileShape = Object.prototype.hasOwnProperty.call(profile ?? {}, 'phoneNumber')
 
+      // Этот признак нужен как временный мост между старыми и новыми версиями backend.
       setOrdersSupported(!legacyProfileShape)
       setProfileForm({
         login: profile?.login || '',
@@ -164,6 +175,16 @@ export default function ProfilePage() {
       return
     }
 
+    const confirmed = await confirmAction({
+      title: 'Снять резерв?',
+      message: `Резерв по билету «${hold?.listing?.eventName || 'Без названия'}» будет отменён, и билет снова станет доступен другим пользователям.`,
+      confirmLabel: 'Снять резерв',
+    })
+
+    if (!confirmed) {
+      return
+    }
+
     setHoldActionId(hold.id)
     setError('')
 
@@ -185,6 +206,8 @@ export default function ProfilePage() {
       return
     }
 
+    // Используем snapshot из уже загруженных списков, потому что backend деталей объявления
+    // не всегда отдаёт все поля, нужные для предзаполнения формы редактирования.
     const listingSnapshot = activeListings.find((ticket) => ticket?.id === ticketId)
       || archivedListings.find((ticket) => ticket?.id === ticketId)
 
@@ -204,7 +227,13 @@ export default function ProfilePage() {
       return
     }
 
-    if (!window.confirm(`Снять с продажи объявление «${ticket.eventName || 'Без названия'}»?`)) {
+    const confirmed = await confirmAction({
+      title: 'Снять объявление с продажи?',
+      message: `Объявление «${ticket.eventName || 'Без названия'}» исчезнет из каталога и из активных продаж.`,
+      confirmLabel: 'Снять с продажи',
+    })
+
+    if (!confirmed) {
       return
     }
 
@@ -215,6 +244,7 @@ export default function ProfilePage() {
     try {
       await ticketsApi.remove(ticket.id)
       removedListingIdsRef.current.add(ticket.id)
+      // Локально убираем объявление сразу, чтобы оно не мигало обратно до следующего полного refresh.
       setActiveListings((current) => current.filter((item) => item.id !== ticket.id))
       setArchivedListings((current) => current.filter((item) => item.id !== ticket.id))
       triggerRefresh()
@@ -259,6 +289,19 @@ export default function ProfilePage() {
     const normalizedPassword = typeof password === 'string' ? password.trim() : ''
     if (!normalizedPassword) {
       setError('Введите текущий пароль, чтобы изменить настройку 2FA')
+      return
+    }
+
+    const confirmed = await confirmAction({
+      title: nextValue ? 'Включить 2FA?' : 'Отключить 2FA?',
+      message: nextValue
+        ? 'При каждом входе система начнёт запрашивать дополнительный код подтверждения.'
+        : 'Дополнительный код подтверждения больше не будет запрашиваться при входе.',
+      confirmLabel: nextValue ? 'Включить 2FA' : 'Отключить 2FA',
+      tone: 'primary',
+    })
+
+    if (!confirmed) {
       return
     }
 

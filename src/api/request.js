@@ -1,5 +1,6 @@
 import apiClient from './apiClient'
 
+// Логика обработки вынесена в apiClient
 export async function getData(url, config) {
   const response = await apiClient.get(url, config)
   return response.data

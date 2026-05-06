@@ -52,6 +52,11 @@ const buildTicketParams = (filters = {}, page = 0, size = DEFAULT_PAGE_SIZE) => 
   return params
 }
 
+/*
+  Хук витрины билетов.
+  Backend в разных версиях может вернуть либо plain array, либо paged-object.
+  Здесь приводим оба варианта к одной форме, чтобы HomePage не держал в голове детали контракта.
+*/
 export function useTickets({ filters, page = 0, size = DEFAULT_PAGE_SIZE } = {}) {
   const [tickets, setTickets] = useState([])
   const [pageInfo, setPageInfo] = useState(defaultPage)

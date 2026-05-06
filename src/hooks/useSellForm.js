@@ -1,7 +1,16 @@
 import { useState, useCallback } from 'react'
 import { ticketsApi } from '@/api'
+import { useModal } from '@/context'
 import Logger from '@/utils/logger'
 
+/*
+  Сценарий "выставить билет на продажу":
+  - хранит форму и вложения;
+  - валидирует ввод;
+  - собирает payload под backend;
+  - показывает confirm;
+  - отправляет multipart-запрос.
+*/
 const initialFormState = {
   eventName: '',
   eventDate: '',
@@ -70,6 +79,7 @@ const mergeFiles = (currentFiles, newFiles) => {
 }
 
 export function useSellForm(onSuccess) {
+  const { confirmAction } = useModal()
   const [form, setForm] = useState(initialFormState)
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
@@ -159,10 +169,22 @@ export function useSellForm(onSuccess) {
       return
     }
 
+    const confirmed = await confirmAction({
+      title: 'Отправить объявление на продажу?',
+      message: `Объявление по билету «${form.eventName.trim() || 'Без названия'}» будет отправлено на проверку и появится в каталоге после одобрения.`,
+      confirmLabel: 'Отправить заявку',
+      tone: 'primary',
+    })
+
+    if (!confirmed) {
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
+      // На фронте держим одну понятную структуру формы, а к transport-форме приводим в момент отправки.
       const ticketData = buildSellPayload(form)
 
       await ticketsApi.sell(ticketData, files)
@@ -182,7 +204,7 @@ export function useSellForm(onSuccess) {
     } finally {
       setLoading(false)
     }
-  }, [form, validateForm, files, onSuccess])
+  }, [confirmAction, files, form, onSuccess, validateForm])
 
   return {
     form,

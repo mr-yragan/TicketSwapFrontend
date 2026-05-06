@@ -1,5 +1,14 @@
 import { deleteData, getData, postData, putData } from '../request'
 
+/*
+  API объявления/билета.
+  Этот модуль знает только про HTTP-контракт backend:
+  - список/детали;
+  - продажу и редактирование;
+  - приватные оригиналы файлов;
+  - публичные blur-preview;
+  - покупку через idempotency key.
+*/
 const appendTicketFiles = (formData, files) => {
   if (!files || files.length === 0) {
     return
@@ -42,6 +51,7 @@ export const ticketsApi = {
   },
 
   async sell(ticketData, files) {
+    // Backend ждёт multipart: JSON-часть "ticket" + отдельные ticketFiles.
     const formData = new FormData()
     const ticketBlob = new Blob(
       [JSON.stringify(ticketData)],

@@ -1,3 +1,6 @@
+/*
+  Обычный форматер для обработк корректной сообщений от сервера.
+*/
 export const formatErrorMessage = (error, defaultMessage) => {
   const fieldErrors = error.response?.data?.fieldErrors
 

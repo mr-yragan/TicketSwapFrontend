@@ -2,6 +2,11 @@ import axios from 'axios'
 import { Logger } from '@/utils/logger'
 import { API_CONFIG } from '@/config/constants'
 
+/*
+  Общий axios-клиент для всего приложения.
+  Через него проходят все запросы, он подставлять JWT, корректно отправлять FormData,
+  проверят ошибки по приватным файлам билета
+*/
 const apiClient = axios.create({
   baseURL: '/api',
   headers: {
@@ -42,6 +47,8 @@ apiClient.interceptors.response.use(
     return response
   },
   (error) => {
+    // Для приватных файлов и публичных blur-preview часть 401/403/404 ожидаема:
+    // доступ может зависеть от роли, а превью могут отсутствовать у старых данных.
     const requestUrl = error.config?.url || ''
     const isExpectedTicketFileAccessError = (
       (error.response?.status === 401 || error.response?.status === 403)

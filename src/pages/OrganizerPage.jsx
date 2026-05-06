@@ -1,4 +1,4 @@
-import { useAuth } from '@/context'
+import { useAuth, useModal } from '@/context'
 import { DismissibleAlert } from '@/components/ui'
 import { ManualQueues } from '@/features/organizer/components/ManualQueues'
 import { OrganizerEventForm } from '@/features/organizer/components/OrganizerEventForm'
@@ -8,14 +8,26 @@ import { OrganizerProfileSummary } from '@/features/organizer/components/Organiz
 import { OrganizerStatusMessage } from '@/features/organizer/components/OrganizerStatusMessage'
 import { useOrganizerWorkspace } from '@/features/organizer/hooks/useOrganizerWorkspace'
 
+/*
+  Экран организатора — это в первую очередь оболочка над useOrganizerWorkspace.
+  Важная развилка здесь одна: manual organizer и API organizer видят разный рабочий процесс,
+  но сама страница старается не держать бизнес-детали у себя.
+*/
 export default function OrganizerPage() {
   const { user } = useAuth()
+  const { confirmAction } = useModal()
   const role = (user?.role || '').toUpperCase()
   const isOrganizer = role === 'ORGANIZER'
   const workspace = useOrganizerWorkspace(isOrganizer)
 
-  const handleDeleteEvent = (eventItem) => {
-    if (!window.confirm(`Удалить мероприятие "${eventItem.name}"?`)) return
+  const handleDeleteEvent = async (eventItem) => {
+    const confirmed = await confirmAction({
+      title: 'Удалить мероприятие?',
+      message: `Мероприятие «${eventItem.name}» будет удалено, если сервер разрешит это сделать.`,
+      confirmLabel: 'Удалить мероприятие',
+    })
+
+    if (!confirmed) return
     workspace.deleteEvent(eventItem)
   }
 

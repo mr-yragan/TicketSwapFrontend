@@ -4,6 +4,13 @@ import { ticketsApi } from '@/api'
 import { useAuth } from '@/context'
 import Logger from '@/utils/logger'
 
+/*
+  Оригинальные файлы билета доступны не всем.
+  Поэтому здесь:
+  - сначала проверяем авторизацию;
+  - затем грузим метаданные файлов;
+  - download-url кэшируем отдельно, потому что он может быть signed и запрашивается по одному файлу.
+*/
 export function useTicketFiles(ticketId) {
   const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState([])

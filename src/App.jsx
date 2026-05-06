@@ -8,6 +8,7 @@ import { SellTicketModal } from './components/SellTicketModal'
 import { TwoFactorModal } from './components/TwoFactorModal'
 import { ForgotPasswordModal } from './components/ForgotPasswordModal'
 import { EditListingModal } from './components/EditListingModal'
+import { ConfirmActionModal } from './components/ConfirmActionModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import HomePage from './pages/HomePage'
 import TicketDetailPage from './pages/TicketDetailPage'
@@ -17,8 +18,14 @@ import AdminPage from './pages/AdminPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 
+/*
+  Корневая точка фронта:
+  - маршруты рендерятся здесь;
+  - глобальные модалки монтируются здесь же, чтобы их можно было открыть из любого места;
+  - providers оборачивают приложение снаружи и дают auth/modal/refresh-контекст всем страницам.
+*/
 function AppContent() {
-  const { currentModal } = useModal()
+  const { currentModal, confirmation } = useModal()
 
   return (
     <div className="min-h-screen bg-white">
@@ -39,6 +46,7 @@ function AppContent() {
       {currentModal === 'editListing' && <EditListingModal />}
       {currentModal === 'twoFactor' && <TwoFactorModal />}
       {currentModal === 'forgotPassword' && <ForgotPasswordModal />}
+      {confirmation && <ConfirmActionModal />}
     </div>
   )
 }

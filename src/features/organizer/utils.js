@@ -22,6 +22,18 @@ export const toDateTimeInput = (value) => {
   return localDate.toISOString().slice(0, 16)
 }
 
+export const getOrganizerHint = (organizer) => {
+  if (organizer?.verificationMode === 'EXTERNAL_API' || organizer?.hasExternalApi) {
+    return 'Проверка у партнёра'
+  }
+
+  if (organizer?.verificationMode === 'MANUAL') {
+    return 'Проверка у организатора'
+  }
+
+  return 'Тип проверки не указан'
+}
+
 export const toIsoInstant = (value) => {
   if (!value) return ''
   return new Date(value).toISOString()

@@ -6,6 +6,11 @@ import { clearAuthData, getStoredAuthData, saveAuthData } from './storage'
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null)
 
+/*
+  Глобальный auth-state приложения.
+  При старте пытается восстановить сессию из localStorage, затем подтягивает свежий профиль
+  и синхронизирует email / id / role, чтобы остальные экраны не гадали, кто сейчас в системе.
+*/
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => getStoredAuthData())
 
@@ -19,6 +24,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
+        // Профиль — главный источник роли и user id. localStorage здесь только стартовая опора.
         const profile = await profileApi.getProfile()
         if (isCancelled) return
 

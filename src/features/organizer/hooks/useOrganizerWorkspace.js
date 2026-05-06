@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { organizerApi } from '@/api'
+import { useModal } from '@/context'
 import { EMPTY_EVENT_FORM } from '../constants'
 import {
   buildEventPayload,
@@ -8,11 +9,21 @@ import {
   mapEventToForm,
 } from '../utils'
 
+/*
+  Главный orchestration-hook панели организатора.
+  Снаружи страница видит один workspace-объект, а здесь уже собраны:
+  - профиль и dashboard организатора;
+  - список событий;
+  - ручная очередь валидации и перевыпуска;
+  - формы создания/редактирования событий;
+  - все опасные действия с confirm и статусами.
+*/
 const setListingValue = (setter, listingId, value) => {
   setter((current) => ({ ...current, [listingId]: value }))
 }
 
 export function useOrganizerWorkspace(isOrganizer) {
+  const { confirmAction } = useModal()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [status, setStatus] = useState({ type: 'idle', message: '' })
@@ -65,6 +76,7 @@ export function useOrganizerWorkspace(isOrganizer) {
       ])
 
       const manualActive = profileData?.verificationMode === 'MANUAL' && !profileData?.banned
+      // Manual-очереди вообще не нужны API-организатору, поэтому не грузим их без необходимости.
       const [validationData, reissueData] = manualActive
         ? await Promise.all([
           organizerApi.listPendingValidation(),
@@ -105,6 +117,19 @@ export function useOrganizerWorkspace(isOrganizer) {
       return
     }
 
+    const confirmed = await confirmAction({
+      title: editingEventId ? 'Сохранить изменения события?' : 'Создать событие?',
+      message: editingEventId
+        ? `Изменения для события «${eventForm.name || 'Без названия'}» будут сохранены.`
+        : `Будет создано новое событие «${eventForm.name || 'Без названия'}».`,
+      confirmLabel: editingEventId ? 'Сохранить изменения' : 'Создать событие',
+      tone: 'primary',
+    })
+
+    if (!confirmed) {
+      return
+    }
+
     setEventAction(editingEventId ? `update-${editingEventId}` : 'create')
     try {
       const payload = buildEventPayload(eventForm)
@@ -127,7 +152,7 @@ export function useOrganizerWorkspace(isOrganizer) {
     } finally {
       setEventAction(null)
     }
-  }, [canMutateManualWorkflow, clearStatus, editingEventId, eventForm, loadOrganizerData, resetEventForm])
+  }, [canMutateManualWorkflow, clearStatus, confirmAction, editingEventId, eventForm, loadOrganizerData, resetEventForm])
 
   const editEvent = useCallback((eventItem) => {
     setEditingEventId(eventItem.id)
@@ -159,6 +184,18 @@ export function useOrganizerWorkspace(isOrganizer) {
   }, [clearStatus, loadOrganizerData])
 
   const verifyListing = useCallback(async (listing, approved) => {
+    const confirmed = await confirmAction({
+      title: approved ? 'Подтвердить билет?' : 'Отклонить билет?',
+      message: approved
+        ? `Билет «${listing.eventName || 'Без названия'}» пройдёт ручную проверку и станет доступен для продажи.`
+        : `Билет «${listing.eventName || 'Без названия'}» будет отклонён.`,
+      confirmLabel: approved ? 'Подтвердить билет' : 'Отклонить билет',
+    })
+
+    if (!confirmed) {
+      return
+    }
+
     setListingAction(`verify-${listing.id}-${approved}`)
     clearStatus()
 
@@ -175,7 +212,7 @@ export function useOrganizerWorkspace(isOrganizer) {
     } finally {
       setListingAction(null)
     }
-  }, [clearStatus, loadOrganizerData, validationReasons])
+  }, [clearStatus, confirmAction, loadOrganizerData, validationReasons])
 
   const completeReissue = useCallback(async (listing) => {
     const newTicketUid = (reissueUids[listing.id] || '').trim()
@@ -183,6 +220,16 @@ export function useOrganizerWorkspace(isOrganizer) {
 
     if (!newTicketUid || !ticketFile) {
       setStatus({ type: 'error', message: 'Для перевыпуска нужны UID нового билета и файл.' })
+      return
+    }
+
+    const confirmed = await confirmAction({
+      title: 'Завершить перевыпуск?',
+      message: `Новый билет для «${listing.eventName || 'Без названия'}» будет загружен покупателю, а сделка завершится.`,
+      confirmLabel: 'Завершить перевыпуск',
+    })
+
+    if (!confirmed) {
       return
     }
 
@@ -200,9 +247,19 @@ export function useOrganizerWorkspace(isOrganizer) {
     } finally {
       setListingAction(null)
     }
-  }, [clearStatus, loadOrganizerData, reissueFiles, reissueUids])
+  }, [clearStatus, confirmAction, loadOrganizerData, reissueFiles, reissueUids])
 
   const rejectReissue = useCallback(async (listing) => {
+    const confirmed = await confirmAction({
+      title: 'Отказать в перевыпуске?',
+      message: `Перевыпуск билета «${listing.eventName || 'Без названия'}» будет отклонён.`,
+      confirmLabel: 'Отказать в перевыпуске',
+    })
+
+    if (!confirmed) {
+      return
+    }
+
     setListingAction(`reject-reissue-${listing.id}`)
     clearStatus()
 
@@ -218,7 +275,7 @@ export function useOrganizerWorkspace(isOrganizer) {
     } finally {
       setListingAction(null)
     }
-  }, [clearStatus, loadOrganizerData, reissueReasons])
+  }, [clearStatus, confirmAction, loadOrganizerData, reissueReasons])
 
   return {
     canMutateManualWorkflow,

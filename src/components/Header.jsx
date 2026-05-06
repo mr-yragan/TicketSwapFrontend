@@ -6,8 +6,6 @@ import { Button } from '@/components/ui'
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { Building2, LayoutDashboard, LogIn, LogOut, Menu, PlusCircle, Settings2, Shield, UserPlus, UserRound, X } from 'lucide-react'
 
-const SECONDARY_BUTTON_CLASS = 'border border-gray-300 bg-white px-6 text-black gap-2'
-
 export function Header() {
   const { openModal } = useModal()
   const { isAuthenticated, user, logout } = useAuth()
@@ -276,13 +274,13 @@ function GuestNav({ onOpenLogin, onOpenRegister }) {
     <div className="flex flex-wrap items-center gap-2">
       <Button
         onClick={onOpenLogin}
-        className={SECONDARY_BUTTON_CLASS}>
+        className="border border-gray-300 bg-white px-6 text-black gap-2">
         <LogIn size={18} />
         Вход
       </Button>
       <Button
         onClick={onOpenRegister}
-        className={SECONDARY_BUTTON_CLASS}>
+        className="border border-gray-300 bg-white px-6 text-black gap-2">
         <UserPlus size={18} />
         Регистрация
       </Button>
@@ -383,13 +381,13 @@ function MobileMenu({
             <div className="space-y-3">
               <Button
                 onClick={() => handleAction(onOpenLogin)}
-                className={`w-full justify-center ${SECONDARY_BUTTON_CLASS}`}>
+                className="w-full justify-center border border-gray-300 bg-white px-6 text-black gap-2">
                 <LogIn size={18} />
                 Вход
               </Button>
               <Button
                 onClick={() => handleAction(onOpenRegister)}
-                className={`w-full justify-center ${SECONDARY_BUTTON_CLASS}`}>
+                className="w-full justify-center border border-gray-300 bg-white px-6 text-black gap-2">
                 <UserPlus size={18} />
                 Регистрация
               </Button>

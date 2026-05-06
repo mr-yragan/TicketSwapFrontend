@@ -3,6 +3,11 @@ import { ticketsApi } from '@/api'
 import { normalizeTicketFilePreviews } from '@/api/formatters'
 import Logger from '@/utils/logger'
 
+/*
+  Публичные blur-preview для карточек и детальной страницы.
+  Это отдельный поток от оригинальных файлов: превью может быть доступно всем,
+  даже если полный файл скрыт до покупки или без нужной роли.
+*/
 export function useTicketFilePreviews(ticketId) {
   const [previews, setPreviews] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +42,7 @@ export function useTicketFilePreviews(ticketId) {
         }
 
         if (err?.response?.status === 404) {
+          // У старых билетов превью может просто не быть — это не повод считать экран сломанным.
           setPreviews([])
           setError(null)
         } else {
