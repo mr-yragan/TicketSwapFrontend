@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
+import { Download } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { useReissuedTicketDownload } from '@/hooks/useReissuedTicketDownload'
 import { ProfileFormSection } from './ProfileFormSection'
 import { ProfileSecuritySection } from './ProfileSecuritySection'
 
@@ -64,7 +66,17 @@ function EmptyState({ children }) {
   )
 }
 
-function ProfileTicketCard({ ticket, label, statusLabel, onOpen, actions = null }) {
+function ProfileTicketCard({
+  actions = null,
+  downloadError = '',
+  downloadLoading = false,
+  label,
+  onDownloadReissuedTicket,
+  onOpen,
+  showReissuedDownload = false,
+  statusLabel,
+  ticket,
+}) {
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm">
       <button
@@ -95,8 +107,22 @@ function ProfileTicketCard({ ticket, label, statusLabel, onOpen, actions = null 
         >
           Открыть билет
         </Button>
+        {showReissuedDownload && (
+          <Button
+            type="button"
+            onClick={() => onDownloadReissuedTicket(ticket?.id)}
+            disabled={downloadLoading}
+            className="gap-2 border border-gray-300 bg-white text-black"
+          >
+            <Download size={16} />
+            {downloadLoading ? 'Получаем...' : 'Скачать новый билет'}
+          </Button>
+        )}
         {actions}
       </div>
+      {downloadError && (
+        <p className="mt-3 text-sm text-red-700">{downloadError}</p>
+      )}
     </div>
   )
 }
@@ -218,6 +244,11 @@ export function ProfilePageTabs({
   twoFactorSupported,
 }) {
   const navigate = useNavigate()
+  const {
+    downloadReissuedTicket,
+    errorByTicketId: reissuedDownloadErrors,
+    loadingTicketId: reissuedDownloadLoadingId,
+  } = useReissuedTicketDownload()
 
   const openTicket = (ticketId) => {
     if (!ticketId) return
@@ -307,10 +338,14 @@ export function ProfilePageTabs({
             {upcomingPurchases.map((purchase) => (
               <ProfileTicketCard
                 key={purchase.id}
+                downloadError={reissuedDownloadErrors[purchase.id] || ''}
+                downloadLoading={reissuedDownloadLoadingId === purchase.id}
                 ticket={purchase}
                 label="Цена покупки"
+                onDownloadReissuedTicket={downloadReissuedTicket}
                 statusLabel="Куплено"
                 onOpen={openTicket}
+                showReissuedDownload
               />
             ))}
           </div>
@@ -325,10 +360,14 @@ export function ProfilePageTabs({
             {pastPurchases.map((purchase) => (
               <ProfileTicketCard
                 key={purchase.id}
+                downloadError={reissuedDownloadErrors[purchase.id] || ''}
+                downloadLoading={reissuedDownloadLoadingId === purchase.id}
                 ticket={purchase}
                 label="Цена покупки"
+                onDownloadReissuedTicket={downloadReissuedTicket}
                 statusLabel="Завершено"
                 onOpen={openTicket}
+                showReissuedDownload
               />
             ))}
           </div>
