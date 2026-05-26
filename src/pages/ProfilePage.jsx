@@ -46,7 +46,8 @@ export default function ProfilePage() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [twoFactorLoading, setTwoFactorLoading] = useState(false)
   const [twoFactorSupported, setTwoFactorSupported] = useState(true)
-  const [profileForm, setProfileForm] = useState({ login: '' })
+  const [profileForm, setProfileForm] = useState({ login: '', password: '' })
+  const [currentProfileLogin, setCurrentProfileLogin] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
 
   // Источник истины для подтверждения почты — auth context, а не локальная копия страницы.
@@ -76,7 +77,9 @@ export default function ProfilePage() {
       setOrdersSupported(!legacyProfileShape)
       setProfileForm({
         login: profile?.login || '',
+        password: '',
       })
+      setCurrentProfileLogin(profile?.login || '')
 
       const twoFactorStatus = await twoFactorApi.getTwoFactorStatus()
       if (twoFactorStatus?.unsupported || twoFactorStatus?.unavailable) {
@@ -343,6 +346,14 @@ export default function ProfilePage() {
     setError('')
 
     const login = (profileForm.login || '').trim()
+    const password = profileForm.password || ''
+    const loginChanged = login !== currentProfileLogin
+
+    if (!login) {
+      setError('Введите логин')
+      setProfileSaving(false)
+      return
+    }
 
     if (login && (!LOGIN_PATTERN.test(login) || login.length < 3 || login.length > 32)) {
       setError('Логин: 3-32 символа, только буквы, цифры и символы _. -, без @')
@@ -350,11 +361,30 @@ export default function ProfilePage() {
       return
     }
 
+    if (loginChanged && !password) {
+      setError('Введите текущий пароль, чтобы изменить логин')
+      setProfileSaving(false)
+      return
+    }
+
     try {
-      const updated = await profileApi.updateProfile({ login })
+      const updated = await profileApi.updateProfile({ login, password: loginChanged ? password : undefined })
       setProfileForm({
         login: updated?.login || '',
+        password: '',
       })
+      setCurrentProfileLogin(updated?.login || '')
+
+      if (loginChanged) {
+        logout?.()
+        navigate('/', { replace: true })
+        openModal('login', {
+          message: 'Логин изменён. Войдите снова, чтобы продолжить.',
+          identifier: updated?.login || login,
+        })
+        return
+      }
+
       setSuccessMessage('Профиль обновлен')
     } catch (e) {
       console.error('Ошибка обновления профиля:', e)

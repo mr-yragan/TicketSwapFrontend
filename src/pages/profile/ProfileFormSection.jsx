@@ -4,7 +4,7 @@ export function ProfileFormSection({ profileForm, setProfileForm, onSaveProfile,
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       <h3 className="text-lg font-semibold">Данные профиля</h3>
-      <p className="text-sm text-gray-600 mt-2">Обновите логин для входа в аккаунт.</p>
+      <p className="text-sm text-gray-600 mt-2">Для смены логина подтвердите действие текущим паролем.</p>
 
       <form className="mt-5 grid gap-4" onSubmit={onSaveProfile}>
         <div>
@@ -17,6 +17,20 @@ export function ProfileFormSection({ profileForm, setProfileForm, onSaveProfile,
             placeholder="Например, my_login"
             minLength={3}
             maxLength={32}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Текущий пароль</label>
+          <input
+            type="password"
+            value={profileForm.password}
+            onChange={(e) => setProfileForm((prev) => ({ ...prev, password: e.target.value }))}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+            placeholder="Введите пароль для смены логина"
+            minLength={8}
+            maxLength={72}
+            autoComplete="current-password"
           />
         </div>
 

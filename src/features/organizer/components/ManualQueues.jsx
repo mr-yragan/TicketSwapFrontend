@@ -1,5 +1,7 @@
-import { Check, FileCheck2, Loader2, Upload, X } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Download, FileCheck2, FileText, Loader2, Upload, X } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
+import { useTicketFiles } from '@/hooks/useTicketFiles'
 import { formatDateTime, formatMoney } from '../utils'
 
 export function ManualQueues({
@@ -97,8 +99,118 @@ function ListingSummary({ listing }) {
         <span>Продавец: {listing.seller?.email || listing.seller?.login || '-'}</span>
         <span>Покупатель: {listing.buyer?.email || listing.buyer?.login || '-'}</span>
       </div>
+      <TicketFiles listingId={listing.id} expectedCount={listing.ticketFilesCount ?? 0} />
     </div>
   )
+}
+
+function TicketFiles({ listingId, expectedCount }) {
+  const { files, loading, error, getDownloadUrl } = useTicketFiles(listingId)
+  const [openingFileId, setOpeningFileId] = useState(null)
+  const [openError, setOpenError] = useState('')
+
+  const openFile = async (file) => {
+    setOpenError('')
+    setOpeningFileId(file.id)
+
+    try {
+      const url = await getDownloadUrl(file.id)
+      if (!url) {
+        setOpenError('Не удалось получить ссылку на файл')
+        return
+      }
+
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } finally {
+      setOpeningFileId(null)
+    }
+  }
+
+  if (expectedCount === 0 && !loading && files.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase text-gray-500">
+        <FileText size={14} />
+        Файлы билета
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 size={16} className="animate-spin" />
+          Загружаем файлы...
+        </div>
+      )}
+
+      {!loading && error === 'noAccess' && (
+        <p className="text-sm text-red-700">Нет доступа к файлам билета</p>
+      )}
+
+      {!loading && error === 'loadError' && (
+        <p className="text-sm text-red-700">Не удалось загрузить файлы билета</p>
+      )}
+
+      {!loading && !error && files.length === 0 && (
+        <p className="text-sm text-gray-500">Файлы не прикреплены</p>
+      )}
+
+      {!loading && !error && files.length > 0 && (
+        <div className="grid gap-2">
+          {files.map((file, index) => (
+            <div
+              key={file.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-gray-900">
+                  {file.originalName || `Файл ${index + 1}`}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {file.contentType || 'файл'} · {formatFileSize(file.sizeBytes)}
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={() => openFile(file)}
+                disabled={openingFileId === file.id}
+                title="Открыть файл билета"
+                className="h-9 gap-2 border border-gray-300 bg-white px-3 text-sm text-black">
+                {openingFileId === file.id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                Открыть
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {openError && (
+        <p className="mt-2 text-sm text-red-700">{openError}</p>
+      )}
+    </div>
+  )
+}
+
+function formatFileSize(sizeBytes) {
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return 'размер неизвестен'
+  }
+
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} Б`
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${Math.round(sizeBytes / 1024)} КБ`
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} МБ`
 }
 
 function ValidationActions({ listing, listingAction, onReasonChange, onVerifyListing, reason }) {

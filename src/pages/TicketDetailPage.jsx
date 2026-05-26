@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -13,10 +13,10 @@ import {
 import { Button } from '@/components/ui'
 import { TicketCarousel } from '@/components/TicketCarousel'
 import PurchaseButton from '@/components/PurchaseButton'
-import { ticketsApi } from '@/api'
 import { useAuth } from '@/context'
 import { useTicket } from '@/hooks/useTicket'
 import { useTicketStatusHistory } from '@/hooks/useTicketStatusHistory'
+import { useReissuedTicketDownload } from '@/hooks/useReissuedTicketDownload'
 import { useOrganizerCatalog } from '@/features/organizer/hooks/useOrganizerCatalog'
 import { getTicketStatusLabel } from '@/utils/ticketFormatters'
 
@@ -114,13 +114,6 @@ const formatDateTime = (value) => {
   })
 }
 
-/*
-  Детальная страница объявления.
-  Сюда сходятся три независимых источника данных:
-  - детали самого билета;
-  - каталог организаторов, чтобы понять тип проверки;
-  - история статусов, но только для админа.
-*/
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -130,8 +123,11 @@ export default function TicketDetailPage() {
   const details = ticket?.details ?? ticket
   const status = ticket?.status
   const isAdmin = (user?.role || '').toUpperCase() === 'ADMIN'
-  const [reissuedDownloadLoading, setReissuedDownloadLoading] = useState(false)
-  const [reissuedDownloadError, setReissuedDownloadError] = useState('')
+  const {
+    downloadReissuedTicket,
+    errorByTicketId: reissuedDownloadErrors,
+    loadingTicketId: reissuedDownloadLoadingId,
+  } = useReissuedTicketDownload()
   const { history: statusHistory, loading: historyLoading, error: historyError } = useTicketStatusHistory(details?.id, isAdmin)
 
   const partnerSupported = useMemo(() => {
@@ -148,7 +144,6 @@ export default function TicketDetailPage() {
       return null
     }
 
-    // В деталях билета нет полного organizer-объекта, поэтому восстанавливаем тип проверки через каталог.
     return Boolean(organizer.hasExternalApi)
   }, [details?.organizerName, organizers])
 
@@ -156,25 +151,8 @@ export default function TicketDetailPage() {
   const validationBadgeLabel = getValidationBadgeLabel({ isVerified, partnerSupported })
   const statusMessage = getTicketStatusMessage({ isVerified, partnerSupported })
 
-  const handleDownloadReissuedTicket = async () => {
-    setReissuedDownloadError('')
-    setReissuedDownloadLoading(true)
-
-    try {
-      const response = await ticketsApi.getReissuedFileDownloadUrl(details.id)
-      if (!response?.url) {
-        setReissuedDownloadError('Ссылка на новый билет не получена')
-        return
-      }
-
-      window.location.href = response.url
-    } catch (downloadError) {
-      const data = downloadError?.response?.data
-      setReissuedDownloadError(data?.message || data?.error || 'Не удалось получить новый билет')
-    } finally {
-      setReissuedDownloadLoading(false)
-    }
-  }
+  const reissuedDownloadError = reissuedDownloadErrors[details?.id] || ''
+  const reissuedDownloadLoading = reissuedDownloadLoadingId === details?.id
 
   if (loading) {
     return (
@@ -293,7 +271,7 @@ export default function TicketDetailPage() {
               </p>
               <Button
                 type="button"
-                onClick={handleDownloadReissuedTicket}
+                onClick={() => downloadReissuedTicket(details.id)}
                 disabled={reissuedDownloadLoading}
                 className="mt-4 gap-2 bg-black text-white"
               >
